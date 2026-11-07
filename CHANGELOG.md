@@ -10,8 +10,9 @@ semantic versioning.
 
 - A native teal.fm dashboard for iOS and Android, with Now, Stats, History and
   Profile screens.
-- A bar-chart app icon on both platforms: one flattened asset-catalog image on
-  iOS, and adaptive foreground, background and monochrome layers on Android.
+- A bar-chart app icon on both platforms: default, dark and tinted
+  asset-catalog images on iOS, and adaptive foreground, background and
+  monochrome layers on Android.
 - Kotlin Multiplatform core holding the `fm.teal.*` record models, tolerant
   per-record JSON decoding, XRPC query construction, and all listening
   statistics.

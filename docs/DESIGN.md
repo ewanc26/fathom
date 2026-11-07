@@ -76,11 +76,13 @@ tallest in mint and the rest in the bright teal. It borrows the family's
 construction rather than its letterform — one centred geometric mark, flat
 colour, no text — because Inkwell's letter belongs to Inkwell.
 
-iOS gets one opaque 1024×1024 square with no baked corners or shadow, so the
-system can mask it and apply its own dark and tinted treatments. Android uses
-108 dp adaptive layers, keeps the mark inside the 66 dp safe zone, and ships a
-monochrome layer for themed icons. `scripts/gen-icon.py` draws the bitmap and
-both vector layers from the same coordinates, so the two cannot drift.
+iOS gets three 1024×1024 squares, none with baked corners or shadow: the
+default in opaque colour, a dark variant on a transparent background so the
+system's dark surface shows through, and an opaque greyscale variant for the
+tinted appearance. Android uses 108 dp adaptive layers, keeps the mark inside
+the 66 dp safe zone, and ships a monochrome layer for themed icons.
+`scripts/gen-icon.py` draws all three bitmaps and both vector layers from the
+same coordinates, so the platforms cannot drift.
 
 ## Platform fidelity
 
