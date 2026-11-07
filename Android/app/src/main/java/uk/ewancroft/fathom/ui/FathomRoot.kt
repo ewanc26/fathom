@@ -1,6 +1,7 @@
 package uk.ewancroft.fathom.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -33,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import uk.ewancroft.fathom.FathomViewModel
 import uk.ewancroft.fathom.data.FathomRepository
+import uk.ewancroft.fathom.shared.format.CountText
 import uk.ewancroft.fathom.ui.components.EmptyState
 import uk.ewancroft.fathom.ui.components.Notice
 import uk.ewancroft.fathom.ui.history.HistoryScreen
@@ -149,7 +152,24 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
             }
 
             if (state.loading && dashboard != null) {
-                LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                // A long read needs a quantity, not just motion: "reading" with
+                // no count looks the same at four hundred plays as at twenty
+                // thousand, and the difference is six seconds versus two
+                // minutes.
+                Column(Modifier.fillMaxWidth().align(Alignment.TopCenter)) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+                        Text(
+                            text = "Reading history — " +
+                                "${CountText.compact(dashboard.plays.size)} plays so far",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                        )
+                    }
+                }
             }
 
             state.error?.let { message ->

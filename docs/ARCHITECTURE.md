@@ -91,8 +91,24 @@ platform dependency is common code that cannot behave differently.
 - **Leaders**: five artists and five releases.
 - **Partial pages**: a record that does not decode is counted and skipped.
 
-There is no cache: the repo is the cache, and refetching is correct, if no
-longer cheap.
+## The saved copy
+
+A completed read is written to app-private storage as one JSON file whose
+format lives in `shared/cache`. The next launch decodes it, draws the
+dashboard, and starts the repo read behind it; the saved figures are replaced
+page by page as the real ones arrive.
+
+The read's `sampled` flag is written with the plays, so a history that
+stopped at the guard or on a failed page reopens as exactly that: the plays it
+managed, still labelled partial, with a refresh behind them. A partial read is
+not a smaller truth — it is a different claim, and it must not lose the label
+that says so. `HistoryCache.decode` refuses a file from another version, a
+truncated file and a file with no identity to match, because a cache is always
+safe to discard.
+
+This is a starting picture, not offline mode: a refresh failure leaves the
+saved figures on screen with the error beside them, and the screens go on
+saying they are computed from this repo rather than from teal.fm.
 
 ## Failure
 
@@ -110,6 +126,6 @@ account that has never written one, and the UI falls back to the handle.
 - **No secure storage.** No credential exists to store.
 - **No image loading.** Avatars are monograms; the dashboard makes one kind of
   request and cannot be slowed by a blob host.
-- **No cache or offline mode.** The app shows nothing rather than stale figures
-  it cannot date.
-- **No database.** Nothing survives a launch except the handle and the period.
+- **No database.** One JSON file, rewritten whole after each completed read,
+  plus the handle and period in preferences. There is no schema to migrate and
+  nothing to vacuum.

@@ -1,4 +1,5 @@
 import SwiftUI
+import FathomShared
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
@@ -35,5 +36,32 @@ struct DashboardView: View {
         // One fetch feeds all four tabs; letting each tab load its own would
         // produce four different answers to the same question.
         .task { await model.start() }
+        // A long read needs a quantity, not just motion: "reading" with no
+        // count looks the same at four hundred plays as at twenty thousand,
+        // and the difference is six seconds versus two minutes.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if model.loading, let plays = model.snapshot?.plays.count {
+                ReadingBar(playsRead: plays)
+            }
+        }
+    }
+}
+
+private struct ReadingBar: View {
+    let playsRead: Int
+
+    var body: some View {
+        VStack(spacing: 4) {
+            ProgressView()
+                .progressViewStyle(.linear)
+                .tint(FathomPalette.teal)
+            Text("Reading history — \(FathomCore.shared.countText(value: Int32(playsRead))) plays so far")
+                .font(.caption2)
+                .foregroundStyle(FathomPalette.muted)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(FathomPalette.surface)
     }
 }

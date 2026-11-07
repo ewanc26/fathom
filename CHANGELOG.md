@@ -28,5 +28,10 @@ semantic versioning.
 - Progressive reads: the dashboard opens on the newest page and its figures grow
   as the rest of the history arrives, because a full history is minutes of
   requests on a real data server.
+- The read shows how many plays it has reached, so a long history looks like
+  progress rather than a stalled spinner.
+- A history is saved on the device, so a second launch paints the dashboard
+  at once and refreshes behind it. The saved copy keeps the read's completeness
+  flag, so a partial history is still labelled partial when it reopens.
 - OAuth scope constants and client metadata recorded for a future write path,
   unused today.

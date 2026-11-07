@@ -4,15 +4,18 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import uk.ewancroft.fathom.data.Dashboard
 import uk.ewancroft.fathom.data.FathomException
 import uk.ewancroft.fathom.data.FathomRepository
+import uk.ewancroft.fathom.data.HistoryCacheStore
 import uk.ewancroft.fathom.data.IdentityStore
 import uk.ewancroft.fathom.shared.stats.Period
 
@@ -35,6 +38,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
     )
 
     private val store = IdentityStore(application)
+    private val cache = HistoryCacheStore(application)
     private val repository = FathomRepository()
     private val _state = MutableStateFlow(
         UiState(identity = store.identity(), period = store.period()),
@@ -44,7 +48,32 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
     private var loadJob: Job? = null
 
     init {
-        if (_state.value.identity != null) refresh()
+        val identity = _state.value.identity
+        if (identity != null) {
+            // The saved copy paints the dashboard at once; the repo read that
+            // refresh starts replaces it page by page. Painted from a
+            // background coroutine because decoding tens of thousands of
+            // plays is not main-thread work.
+            viewModelScope.launch {
+                val restored = withContext(Dispatchers.IO) {
+                    cache.read(identity)?.let { repository.fromCache(it, _state.value.period) }
+                }
+                if (restored != null) {
+                    // Replace a smaller picture but never a larger one: the
+                    // network may already have published its first (empty)
+                    // page while this was decoding.
+                    _state.update { state ->
+                        val current = state.dashboard
+                        if (current == null || current.plays.size < restored.plays.size) {
+                            state.copy(dashboard = restored)
+                        } else {
+                            state
+                        }
+                    }
+                }
+            }
+            refresh()
+        }
     }
 
     /**
@@ -91,6 +120,18 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                 // A history with no plays never reports progress, so the
                 // identity is saved here as well as in the callback.
                 store.saveIdentity(trimmed)
+                // Saved even when partial: the flag travels with it, so the
+                // next launch draws the same plays with the same label rather
+                // than pretending it has nothing to show.
+                withContext(Dispatchers.IO) {
+                    cache.write(
+                        repository.toCache(
+                            identity = trimmed,
+                            dashboard = dashboard,
+                            savedAtEpochSeconds = System.currentTimeMillis() / 1_000L,
+                        ),
+                    )
+                }
                 _state.update {
                     it.copy(
                         identity = trimmed,
@@ -131,10 +172,28 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                     period = _state.value.period,
                     onProgress = { partial ->
                         // Keep the screens on the newest complete picture while
-                        // the rest of the history arrives.
-                        _state.update { it.copy(dashboard = partial, loading = true) }
+                        // the rest of the history arrives. The first publish
+                        // has no plays yet; letting it through would blank a
+                        // saved fifty-thousand-play snapshot at once.
+                        _state.update { state ->
+                            val current = state.dashboard
+                            if (current != null && partial.plays.size < current.plays.size) {
+                                state.copy(loading = true)
+                            } else {
+                                state.copy(dashboard = partial, loading = true)
+                            }
+                        }
                     },
                 )
+                withContext(Dispatchers.IO) {
+                    cache.write(
+                        repository.toCache(
+                            identity = identity,
+                            dashboard = dashboard,
+                            savedAtEpochSeconds = System.currentTimeMillis() / 1_000L,
+                        ),
+                    )
+                }
                 _state.update { it.copy(dashboard = dashboard, loading = false, error = null) }
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -177,6 +236,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
 
     fun disconnect() {
         loadJob?.cancel()
+        cache.clear()
         store.clearIdentity()
         _state.value = UiState(identity = null, period = _state.value.period)
     }

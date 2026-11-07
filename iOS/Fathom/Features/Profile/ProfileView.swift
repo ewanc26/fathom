@@ -22,7 +22,7 @@ struct ProfileView: View {
                     .buttonStyle(.bordered)
                     .frame(maxWidth: .infinity)
 
-                    Text("Fathom keeps no copy of your listening. Disconnecting forgets the handle and nothing else.")
+                    Text("Fathom keeps one copy of your public history on this device so the next launch opens instantly. Disconnecting deletes it along with the handle.")
                         .font(.caption2)
                         .foregroundStyle(FathomPalette.muted)
                         .frame(maxWidth: .infinity, alignment: .leading)
