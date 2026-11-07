@@ -124,7 +124,7 @@ jobs:
         # sign-in, annotations show on the public summary.
         run: |
           set +e
-          ./scripts/build-xcframework.sh 2>&1 | tee /tmp/xcframework.log
+          bash ./scripts/build-xcframework.sh 2>&1 | tee /tmp/xcframework.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             tail -n 15 /tmp/xcframework.log | while IFS= read -r line; do
