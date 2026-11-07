@@ -1,0 +1,14 @@
+{
+  "client_id": "https://fathom.ewancroft.uk/client-metadata.json",
+  "client_name": "Fathom",
+  "client_uri": "https://fathom.ewancroft.uk",
+  "logo_uri": "https://fathom.ewancroft.uk/icon.png",
+  "tos_uri": "https://fathom.ewancroft.uk/terms",
+  "policy_uri": "https://fathom.ewancroft.uk/privacy",
+  "redirect_uris": ["uk.ewancroft.fathom:/oauth/callback"],
+  "scope": "atproto repo:fm.teal.feed.play?action=create repo:fm.teal.actor.profile?action=create&action=update repo:fm.teal.actor.status?action=create&action=delete",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "application_type": "native",
+  "dpop_bound_access_tokens": true
+}
