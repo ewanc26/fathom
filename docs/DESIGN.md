@@ -84,6 +84,10 @@ the 66 dp safe zone, and ships a monochrome layer for themed icons.
 `scripts/gen-icon.py` draws all three bitmaps and both vector layers from the
 same coordinates, so the platforms cannot drift.
 
+The same bars, without the tile, are the launch screen on both platforms: one
+centred mark on the deep background, so the icon, the launch and the first
+frame the dashboard draws are the same design.
+
 ## Platform fidelity
 
 The same four screens, drawn with each platform's own conventions:

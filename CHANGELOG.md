@@ -13,6 +13,8 @@ semantic versioning.
 - A bar-chart app icon on both platforms: default, dark and tinted
   asset-catalog images on iOS, and adaptive foreground, background and
   monochrome layers on Android.
+- A launch screen on both platforms carrying the bar mark without its tile,
+  on the same deep background as the app.
 - Kotlin Multiplatform core holding the `fm.teal.*` record models, tolerant
   per-record JSON decoding, XRPC query construction, and all listening
   statistics.
