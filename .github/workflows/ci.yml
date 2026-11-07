@@ -120,7 +120,18 @@ jobs:
         run: ./gradlew --version --no-daemon
 
       - name: Build shared XCFramework
-        run: ./scripts/build-xcframework.sh
+        # Surface the last lines of the build as annotations so the failure
+        # is visible from the summary; the full log still goes to the step.
+        run: |
+          set +e
+          ./scripts/build-xcframework.sh 2>&1 | tee /tmp/xcframework.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            tail -n 10 /tmp/xcframework.log | while IFS= read -r line; do
+              printf '::error::%s\n' "$line"
+            done
+            exit "$status"
+          fi
 
       - name: Generate Xcode project
         working-directory: iOS
