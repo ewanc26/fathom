@@ -132,6 +132,16 @@ fun listRecordsQuery(
 const val MAX_PAGE = 100
 
 /**
+ * A runaway guard on one load, not a product limit.
+ *
+ * Fifty thousand plays is a decade of heavy listening, and reading past that
+ * would spend more of a phone's memory on a dashboard than the dashboard is
+ * worth. When the guard ends a read the dashboard is marked `sampled`, so the
+ * screens say the figures are partial rather than passing them off as totals.
+ */
+const val MAX_PLAYS = 50_000
+
+/**
  * The URL for an image stored as a blob in a repo.
  *
  * Blobs are served by the PDS that holds the record, not by the AppView, and

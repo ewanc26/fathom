@@ -43,10 +43,14 @@ struct HistoryView: View {
                     EmptyBlock(title: "Nothing loaded", body: "Tap Refresh to try again.")
                 }
             } else if sections.isEmpty {
-                EmptyBlock(
-                    title: "No history",
-                    body: "This account has no dated plays in either teal.fm namespace."
-                )
+                if model.loading {
+                    ProgressView("Reading history").padding(60)
+                } else {
+                    EmptyBlock(
+                        title: "No history",
+                        body: "This account has no dated plays in either teal.fm namespace."
+                    )
+                }
             } else {
                 historyList
             }
@@ -89,7 +93,11 @@ struct HistoryView: View {
             }
 
             if model.snapshot?.sampled == true {
-                Text("Only the most recent plays were read.")
+                Text(
+                    model.loading
+                        ? "Still reading the rest of the history."
+                        : "Only part of the history was read."
+                )
                     .font(.caption2)
                     .foregroundStyle(FathomPalette.muted)
                     .listRowBackground(FathomPalette.background)

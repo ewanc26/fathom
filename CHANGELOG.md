@@ -19,7 +19,14 @@ semantic versioning.
   namespaces are read, so an account mid-migration keeps its older history.
 - Now playing from the `fm.teal.actor.status` record, including expiry
   handling and the empty-track records trackers leave behind.
-- Bounded reads: at most 1,000 plays, with every figure labelled when the cap
-  was reached.
+- Reads the whole play history, paging past the first thousand plays, so "All
+  time" is a total rather than the newest slice. A guard stops at 50,000 plays,
+  and a read that ends early is labelled partial rather than passed off as
+  complete.
+- Changing the period recomputes the figures from the plays already in memory,
+  so switching between 7 days, 30 days and all time does not re-read the repo.
+- Progressive reads: the dashboard opens on the newest page and its figures grow
+  as the rest of the history arrives, because a full history is minutes of
+  requests on a real data server.
 - OAuth scope constants and client metadata recorded for a future write path,
   unused today.

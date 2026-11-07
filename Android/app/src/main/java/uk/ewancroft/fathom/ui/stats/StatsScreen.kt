@@ -39,6 +39,7 @@ import uk.ewancroft.fathom.ui.components.StatTile
 fun StatsScreen(
     dashboard: Dashboard,
     period: Period,
+    reading: Boolean,
     onSelectPeriod: (Period) -> Unit,
 ) {
     val stats = dashboard.stats
@@ -165,16 +166,22 @@ fun StatsScreen(
             }
         }
 
-        provenance(dashboard)
+        provenance(dashboard, reading)
     }
 }
 
 @Composable
-private fun provenance(dashboard: Dashboard) {
+private fun provenance(dashboard: Dashboard, reading: Boolean) {
     val notes = buildList {
         add(Provenance.COMPUTED_LOCALLY)
         if (dashboard.sampled) {
-            add("Only the most recent plays were read, so this is not a all-time total")
+            add(
+                if (reading) {
+                    "Still reading the rest of the history; these figures will grow"
+                } else {
+                    "Only part of the history was read, so this is not a complete total"
+                },
+            )
         }
         if (dashboard.skippedRecords > 0) {
             add("${dashboard.skippedRecords} unreadable ${if (dashboard.skippedRecords == 1) "record was" else "records were"} skipped")

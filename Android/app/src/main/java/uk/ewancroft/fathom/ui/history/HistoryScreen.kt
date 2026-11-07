@@ -36,6 +36,7 @@ fun HistoryScreen(
     dashboard: Dashboard,
     nowEpochSeconds: Long,
     tzOffsetMinutes: Int,
+    reading: Boolean,
 ) {
     val sections = remember(dashboard.plays, tzOffsetMinutes) {
         val dated = dashboard.plays
@@ -47,10 +48,17 @@ fun HistoryScreen(
     }
 
     if (sections.isEmpty()) {
-        EmptyState(
-            title = "No history",
-            body = "This account has no dated plays in either teal.fm namespace.",
-        )
+        if (reading) {
+            EmptyState(
+                title = "Reading history",
+                body = "The plays are still arriving from this account's data server.",
+            )
+        } else {
+            EmptyState(
+                title = "No history",
+                body = "This account has no dated plays in either teal.fm namespace.",
+            )
+        }
         return
     }
 
@@ -79,7 +87,11 @@ fun HistoryScreen(
         if (dashboard.sampled) {
             item(key = "sampled") {
                 Text(
-                    text = "Only the most recent plays were read.",
+                    text = if (reading) {
+                        "Still reading the rest of the history."
+                    } else {
+                        "Only part of the history was read."
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 16.dp),
