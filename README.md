@@ -1,6 +1,16 @@
+<p align="center">
+  <img src="docs/images/app-icon.png" alt="Fathom" width="180">
+</p>
+
+<p align="center">
+  <a href="https://github.com/ewanc26/fathom/actions/workflows/ci.yml"><img src="https://github.com/ewanc26/fathom/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ewanc26/fathom?label=licence" alt="Licence"></a>
+  <a href="https://github.com/sponsors/ewanc26"><img src="https://img.shields.io/github/sponsors/ewanc26?logo=githubsponsors&logoColor=white&label=sponsors" alt="Sponsor"></a>
+</p>
+
 # Fathom
 
-A native teal.fm dashboard for iOS and Android.
+A native teal.fm client for iOS and Android.
 
 Fathom reads the plays already in your AT Protocol repo and turns them into a
 listening dashboard: what is playing now, what today has been, top artists and
@@ -9,6 +19,19 @@ day you actually had.
 
 It is a **reader**. It never writes a record, never asks for a password and
 never holds a token.
+
+## Status
+
+Read-only, and new. I would rather say so plainly.
+
+- **The dashboard works end to end.** All four screens draw from a full read of a real account, a second launch opens from the saved copy, and the reading banner can be dismissed while the read continues behind it.
+- **The figures are honest by construction.** A read that ends early is labelled partial rather than passed off as complete, and the runaway guard stops at 50,000 plays.
+- **Neither app has been run on a device.** Everything verified is Android emulator and iOS simulator, and there is no signed build yet, so installing Fathom still needs a toolchain.
+- **The write path is planned, not started.** Live scrobbling — OAuth, play qualification, an outbound queue and the controls that come with them — is designed in the issue tracker. Nothing here writes yet.
+
+The changelog is in [CHANGELOG.md](CHANGELOG.md), the conventions and the
+decisions behind them in [AGENTS.md](AGENTS.md), and the open work in the
+[issue tracker](https://github.com/ewanc26/fathom/issues).
 
 ## Why it reads your repo rather than an AppView
 
@@ -76,7 +99,7 @@ Android draws the same information with Material 3 components.
 |:---:|:---:|:---:|:---:|
 | <img src="docs/images/screens/now.png" width="200" alt="Now screen: today's plays, time and streak, a fourteen-day chart, and recent plays"> | <img src="docs/images/screens/stats.png" width="200" alt="Stats screen: totals for 7 days and top artists"> | <img src="docs/images/screens/history.png" width="200" alt="History screen: plays grouped by day"> | <img src="docs/images/screens/profile.png" width="200" alt="Profile screen: account details and how the figures are made"> |
 
-## Getting started
+## Building
 
 ### Android
 
@@ -175,7 +198,33 @@ and about five minutes.
 - **No OAuth.** None is needed to read, and a half-implemented flow would be
   worse than none.
 
+## Contributing
+
+[AGENTS.md](AGENTS.md) is the architectural contract; read it before changing
+anything, and keep it aligned with the code. Conventional Commits, scoped by
+area: `feat(android): …`, `fix(shared): …`, `docs(protocol): …`. British
+English in prose and UI copy. The
+[issue tracker](https://github.com/ewanc26/fathom/issues) holds the open work:
+pick an issue, branch from `main`, and open a pull request.
+
+## Support
+
+If you find this project useful, consider supporting its development:
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/ewancroft)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-30363D?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/ewanc26)
+
 ## Licence
 
 Fathom is licensed under the GNU Affero General Public License v3.0. See
-[`LICENSE`](LICENSE).
+[LICENSE](LICENSE).
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=ewanc26%2Ffathom&type=date&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=ewanc26/fathom&type=date&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=ewanc26/fathom&type=date&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=ewanc26/fathom&type=date&legend=bottom-right" />
+ </picture>
+</a>
