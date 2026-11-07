@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shared-android:
+    name: Shared tests and Android build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+          cache-dependency-path: |
+            Android/**/*.gradle*
+            Android/gradle.properties
+            Android/gradle/libs.versions.toml
+            Android/gradle/wrapper/gradle-wrapper.properties
+            shared/**/*.gradle*
+
+      - name: Install Android 36 platform
+        run: sdkmanager --install "platforms;android-36"
+
+      - name: Run shared tests and build Android
+        working-directory: Android
+        run: ./gradlew :shared:jvmTest :app:assembleDebug --stacktrace --no-daemon
+
+  icons:
+    name: Generated icon check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Check generated assets
+        run: python3 scripts/gen-icon.py --check
+
+  ios:
+    name: iOS unit tests
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+          cache-dependency-path: |
+            Android/**/*.gradle*
+            Android/gradle.properties
+            Android/gradle/libs.versions.toml
+            Android/gradle/wrapper/gradle-wrapper.properties
+            shared/**/*.gradle*
+
+      - name: Install XcodeGen
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: brew install xcodegen
+
+      - name: Build shared XCFramework
+        run: ./scripts/build-xcframework.sh
+
+      - name: Generate Xcode project
+        working-directory: iOS
+        run: xcodegen generate
+
+      - name: Run iOS unit tests
+        working-directory: iOS
+        run: |
+          device_id=$(xcrun simctl list devices available --json | jq -r '[.devices[][] | select((.deviceTypeIdentifier // "") | contains("iPhone")) | .udid] | first // empty')
+          if [ -z "$device_id" ]; then
+            echo "No available iPhone simulator found" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "Testing on simulator $device_id"
+          xcodebuild test \
+            -project Fathom.xcodeproj \
+            -scheme Fathom \
+            -destination "platform=iOS Simulator,id=$device_id" \
+            -only-testing:FathomTests \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO
