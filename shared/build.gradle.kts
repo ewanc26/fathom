@@ -33,6 +33,12 @@ kotlin {
         // Warnings are not errors here, but a shared module is small enough
         // that a new one is always worth looking at.
         freeCompilerArgs.add("-Xexpect-actual-classes")
+
+        // The JVM-consuming targets must match :app, which compiles against
+        // JVM 17 and cannot inline bytecode built for a newer target. Without
+        // an explicit target this follows the JDK on PATH (21 on CI), and
+        // :app:compileDebugKotlin fails on every inline function here.
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 
     jvm()
