@@ -6,10 +6,12 @@ in mint, on the deep teal-black background. It follows the family's
 construction — one centred geometric mark, flat colour, no text — rather than
 copying Inkwell's letterform, which belongs to that app.
 
-iOS gets a single opaque 1024x1024 PNG and lets the system mask and tint it.
-Android gets 108 dp vector layers with the mark inside the 66 dp safe zone,
-plus a monochrome layer for themed icons. Both are drawn from the same
-coordinates here, so the two platforms cannot drift.
+iOS gets three 1024x1024 squares: opaque colour for the default appearance, a
+transparent-background dark version so the system's dark surface shows
+through, and an opaque greyscale tinted version. Android gets 108 dp vector
+layers with the mark inside the 66 dp safe zone, plus a monochrome layer for
+themed icons. Everything is drawn from the same coordinates here, so the
+platforms cannot drift.
 
 Standard library only. Usage: python3 scripts/gen-icon.py [--check]
 --check exits 1 if the committed files differ from what this writes.
@@ -48,15 +50,16 @@ def inside(x, y, left, top, width, height, radius):
     return (x - cx) ** 2 + (y - cy) ** 2 <= radius * radius
 
 
-def png(width, height, rows):
+def png(width, height, rows, alpha=False, monochrome=False):
     raw = b"".join(b"\x00" + bytes(row) for row in rows)
+    colour_type = 6 if alpha else (0 if monochrome else 2)
 
     def chunk(tag, data):
         return (struct.pack(">I", len(data)) + tag + data
                 + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
 
     return (b"\x89PNG\r\n\x1a\n"
-            + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, colour_type, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(raw, 9))
             + chunk(b"IEND", b""))
 
@@ -71,33 +74,65 @@ def design_bars():
     return bars
 
 
-def icon_png():
-    """The opaque 1024 square, anti-aliased with 4x4 supersampling."""
+def grey(colour):
+    """Luminance of an sRGB colour, for the tinted appearance."""
+    return round(0.2126 * colour[0] + 0.7152 * colour[1] + 0.0722 * colour[2])
+
+
+def icon_png(appearance):
+    """A 1024 square, anti-aliased with 4x4 supersampling.
+
+    Light is opaque colour. Dark is colour on a transparent background,
+    because the system supplies the dark surface behind it. Tinted is opaque
+    greyscale: iOS tints luminance, so colour here would be guesswork.
+    """
+    transparent = appearance == "dark"
+    monochrome = appearance == "tinted"
+    background_grey = grey(BACKGROUND)
     bars = design_bars()
     rows = []
     for py in range(SIZE):
         row = bytearray()
         for px in range(SIZE):
-            colour = BACKGROUND
-            for bx, by, bw, bh, foreground in bars:
+            foreground = None
+            hits = 0
+            for bx, by, bw, bh, colour in bars:
                 if bx <= px < bx + bw and by <= py < by + bh:
-                    hits = 0
                     for sy in range(4):
                         for sx in range(4):
                             if inside(px + (sx + 0.5) / 4, py + (sy + 0.5) / 4,
                                       bx, by, bw, bh, RADIUS):
                                 hits += 1
                     if hits:
-                        coverage = hits / 16
-                        colour = tuple(
-                            round(BACKGROUND[channel] * (1 - coverage)
-                                  + foreground[channel] * coverage)
-                            for channel in range(3)
-                        )
+                        foreground = colour
                     break
-            row.extend(colour)
+
+            if transparent:
+                if foreground is None:
+                    row.extend((0, 0, 0, 0))
+                else:
+                    row.extend(foreground + (round(255 * hits / 16),))
+            elif monochrome:
+                if foreground is None:
+                    row.append(background_grey)
+                else:
+                    coverage = hits / 16
+                    row.append(round(
+                        background_grey * (1 - coverage)
+                        + grey(foreground) * coverage
+                    ))
+            else:
+                if foreground is None:
+                    row.extend(BACKGROUND)
+                else:
+                    coverage = hits / 16
+                    row.extend(
+                        round(BACKGROUND[channel] * (1 - coverage)
+                              + foreground[channel] * coverage)
+                        for channel in range(3)
+                    )
         rows.append(row)
-    return png(SIZE, SIZE, rows)
+    return png(SIZE, SIZE, rows, alpha=transparent, monochrome=monochrome)
 
 
 def number(value):
@@ -168,7 +203,11 @@ def android_vector(monochrome):
 def outputs():
     return {
         os.path.join(ROOT, "iOS/Fathom/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"):
-            icon_png(),
+            icon_png("light"),
+        os.path.join(ROOT, "iOS/Fathom/Assets.xcassets/AppIcon.appiconset/AppIcon-1024-Dark.png"):
+            icon_png("dark"),
+        os.path.join(ROOT, "iOS/Fathom/Assets.xcassets/AppIcon.appiconset/AppIcon-1024-Tinted.png"):
+            icon_png("tinted"),
         os.path.join(ROOT, "Android/app/src/main/res/drawable/ic_launcher_foreground.xml"):
             android_vector(monochrome=False).encode(),
         os.path.join(ROOT, "Android/app/src/main/res/drawable/ic_launcher_monochrome.xml"):
