@@ -56,6 +56,9 @@ research behind reading the repo at all.
   second launch draws the dashboard immediately and refreshes behind it. A
   saved copy keeps the read's completeness label, so a partial history is
   still labelled partial when it reopens.
+- **Refresh** — pull down on any screen, or use the Refresh action, to read
+  the repo again without relaunching. The figures already on screen stay while
+  the new read arrives.
 - Reads both `fm.teal.*` and the pre-migration `fm.teal.alpha.*` namespace, so
   an account mid-migration keeps its older history.
 - Works for any account on any PDS: the DID is resolved through the PLC

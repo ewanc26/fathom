@@ -81,8 +81,8 @@ platform dependency is common code that cannot behave differently.
   figures grow until the read finishes. A page cost about 585 ms on a real PDS,
   so a twenty-thousand-play history is roughly two minutes — showing a spinner
   for that long would look like a broken app.
-- **Period changes**: recomputed from the plays already in memory. Only Refresh
-  reads the repo again.
+- **Period changes**: recomputed from the plays already in memory. Only an
+  explicit refresh — the toolbar action or a pull — reads the repo again.
 - **Cancellation**: a superseded load stops rather than finishing into a
   snapshot nobody asked for.
 - **History**: the same list, not a second fetch.

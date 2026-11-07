@@ -105,5 +105,6 @@ struct HistoryView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .refreshable { await model.refresh() }
     }
 }
