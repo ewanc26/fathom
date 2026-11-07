@@ -1,0 +1,25 @@
+# Build output
+build/
+.gradle/
+*.iml
+.idea/
+local.properties
+
+# iOS / Kotlin/Native
+DerivedData/
+shared/FathomShared.xcframework/
+*.xcuserdatad
+xcuserdata/
+iOS/Fathom.xcodeproj/
+iOS/build/
+
+# Secrets and signing material
+keystore.properties
+*.keystore
+*.jks
+
+# macOS
+.DS_Store
+
+# Kotlin/Native
+.kotlin/
