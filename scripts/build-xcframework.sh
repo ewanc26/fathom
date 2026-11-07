@@ -11,6 +11,10 @@
 #
 # Gradle 8.13 does not run on JDKs newer than 23, so set JAVA_HOME when the
 # system default is newer.
+#
+# The task names are capitalised with tr rather than ${slice^}: macOS still
+# resolves `bash` to its GPL2-era 3.2, which treats that expansion as a bad
+# substitution and aborts the script before Gradle ever runs.
 
 set -euo pipefail
 
@@ -28,7 +32,8 @@ SLICES=(
 
 TASKS=()
 for slice in "${SLICES[@]}"; do
-  TASKS+=(":shared:linkDebugFramework${slice^}")
+  initial="$(printf '%s' "${slice:0:1}" | tr '[:lower:]' '[:upper:]')"
+  TASKS+=(":shared:linkDebugFramework${initial}${slice:1}")
 done
 
 ( cd Android && ./gradlew "${TASKS[@]}" --console=plain )
