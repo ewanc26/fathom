@@ -38,7 +38,21 @@ jobs:
             shared/**/*.gradle*
 
       - name: Install Android 36 platform
-        run: sdkmanager --install "platforms;android-36"
+        # ubuntu-latest is the Ubuntu 26.04 image since October 2026, and it no
+        # longer puts sdkmanager on PATH. Resolve it from ANDROID_HOME instead.
+        run: |
+          set -eu
+          for candidate in \
+            "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager" \
+            /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \
+            /usr/local/lib/android/sdk/cmdline-tools/bin/sdkmanager; do
+            if [ -x "$candidate" ]; then
+              exec "$candidate" --install "platforms;android-36"
+            fi
+          done
+          echo "sdkmanager not found; ANDROID_HOME=${ANDROID_HOME:-unset}" >&2
+          ls -la "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" >&2 2>/dev/null || true
+          exit 1
 
       - name: Run shared tests and build Android
         working-directory: Android
@@ -80,6 +94,24 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: brew install xcodegen
+
+      - name: Install Android 36 platform
+        # The shared module is an Android library (compileSdk 36); Gradle
+        # configures it even when only the iOS slices are linked, so the
+        # platform must exist on the macOS runner too.
+        run: |
+          set -eu
+          for candidate in \
+            "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager" \
+            /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \
+            /usr/local/lib/android/sdk/cmdline-tools/bin/sdkmanager; do
+            if [ -x "$candidate" ]; then
+              exec "$candidate" --install "platforms;android-36"
+            fi
+          done
+          echo "sdkmanager not found; ANDROID_HOME=${ANDROID_HOME:-unset}" >&2
+          ls -la "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" >&2 2>/dev/null || true
+          exit 1
 
       - name: Build shared XCFramework
         run: ./scripts/build-xcframework.sh
