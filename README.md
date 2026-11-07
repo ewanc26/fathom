@@ -67,6 +67,15 @@ research behind reading the repo at all.
 - Works for any account on any PDS: the DID is resolved through the PLC
   directory and the records are read from that account's own data server.
 
+## Screens
+
+The four screens on iOS, captured from the simulator against a real account.
+Android draws the same information with Material 3 components.
+
+| Now | Stats | History | Profile |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/images/screens/now.png" width="200" alt="Now screen: today's plays, time and streak, a fourteen-day chart, and recent plays"> | <img src="docs/images/screens/stats.png" width="200" alt="Stats screen: totals for 7 days and top artists"> | <img src="docs/images/screens/history.png" width="200" alt="History screen: plays grouped by day"> | <img src="docs/images/screens/profile.png" width="200" alt="Profile screen: account details and how the figures are made"> |
+
 ## Getting started
 
 ### Android
