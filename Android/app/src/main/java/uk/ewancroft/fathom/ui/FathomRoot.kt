@@ -3,6 +3,8 @@ package uk.ewancroft.fathom.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -22,6 +24,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -117,37 +120,55 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
         },
     ) { insets ->
         Box(Modifier.fillMaxSize().padding(insets)) {
-            when {
-                dashboard == null && state.loading -> {
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
-                }
+            // Pulling down re-reads the repo from any tab, because the toolbar
+            // action is easy to miss on a phone and a refresh should not mean
+            // relaunching. The pull indicator is not held spinning for the
+            // read: the bar below is the persistent one, and it carries a
+            // count, which a spinner cannot.
+            PullToRefreshBox(
+                isRefreshing = false,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    dashboard == null && state.loading -> {
+                        CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    }
 
-                dashboard == null -> {
-                    EmptyState(
-                        title = "Nothing loaded",
-                        body = state.error ?: "Pull refresh to try again.",
-                    )
-                }
+                    dashboard == null -> {
+                        // The copy invites a pull, and a scrollable child is
+                        // what gives the gesture something to nest inside when
+                        // there is no data to scroll.
+                        Column(
+                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        ) {
+                            EmptyState(
+                                title = "Nothing loaded",
+                                body = state.error ?: "Pull refresh to try again.",
+                            )
+                        }
+                    }
 
-                else -> when (tab) {
-                    Tab.Now -> NowScreen(dashboard, now, tz)
-                    Tab.Stats -> StatsScreen(
-                        dashboard = dashboard,
-                        period = state.period,
-                        reading = state.loading,
-                        onSelectPeriod = viewModel::selectPeriod,
-                    )
+                    else -> when (tab) {
+                        Tab.Now -> NowScreen(dashboard, now, tz)
+                        Tab.Stats -> StatsScreen(
+                            dashboard = dashboard,
+                            period = state.period,
+                            reading = state.loading,
+                            onSelectPeriod = viewModel::selectPeriod,
+                        )
 
-                    Tab.History -> HistoryScreen(
-                        dashboard = dashboard,
-                        nowEpochSeconds = now,
-                        tzOffsetMinutes = tz,
-                        reading = state.loading,
-                    )
-                    Tab.Profile -> ProfileScreen(
-                        dashboard = dashboard,
-                        onDisconnect = viewModel::disconnect,
-                    )
+                        Tab.History -> HistoryScreen(
+                            dashboard = dashboard,
+                            nowEpochSeconds = now,
+                            tzOffsetMinutes = tz,
+                            reading = state.loading,
+                        )
+                        Tab.Profile -> ProfileScreen(
+                            dashboard = dashboard,
+                            onDisconnect = viewModel::disconnect,
+                        )
+                    }
                 }
             }
 

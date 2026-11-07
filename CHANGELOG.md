@@ -33,5 +33,8 @@ semantic versioning.
 - A history is saved on the device, so a second launch paints the dashboard
   at once and refreshes behind it. The saved copy keeps the read's completeness
   flag, so a partial history is still labelled partial when it reopens.
+- Pull-to-refresh on every dashboard screen, so reading the repo again does
+  not mean relaunching; the figures already on screen stay while the new read
+  arrives.
 - OAuth scope constants and client metadata recorded for a future write path,
   unused today.

@@ -29,6 +29,7 @@ struct NowView: View {
             }
         }
         .background(FathomPalette.background.ignoresSafeArea())
+        .refreshable { await model.refresh() }
         .navigationTitle("Now")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

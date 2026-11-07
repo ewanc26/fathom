@@ -29,6 +29,7 @@ struct StatsView: View {
             }
         }
         .background(FathomPalette.background.ignoresSafeArea())
+        .refreshable { await model.refresh() }
         .navigationTitle("Stats")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

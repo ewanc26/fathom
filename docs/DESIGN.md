@@ -74,9 +74,11 @@ larger than its label, and no state is indicated only by hue.
 The same four screens, drawn with each platform's own conventions:
 
 - **Android** uses a Material 3 `NavigationBar`, a `TopAppBar` with a Refresh
-  action, `FilterChip` for the period and cards with a 20 dp corner radius.
+  action, pull-to-refresh on every tab, `FilterChip` for the period and cards
+  with a 20 dp corner radius.
 - **iOS** uses a `TabView` with SF Symbols, a navigation title with a toolbar
-  button, a segmented `Picker` and a plain `List` for History.
+  button and pull-to-refresh, a segmented `Picker` and a plain `List` for
+  History.
 
 Neither is a port of the other. The KMP boundary is logic; presentation stays
 native.

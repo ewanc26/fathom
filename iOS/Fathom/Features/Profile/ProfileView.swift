@@ -34,6 +34,7 @@ struct ProfileView: View {
             }
         }
         .background(FathomPalette.background.ignoresSafeArea())
+        .refreshable { await model.refresh() }
         .navigationTitle("Profile")
     }
 
