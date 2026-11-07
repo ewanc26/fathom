@@ -113,6 +113,12 @@ jobs:
           ls -la "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" >&2 2>/dev/null || true
           exit 1
 
+      - name: Verify Gradle wrapper
+        # Bisects wrapper download vs configuration failures on the macOS
+        # runner: this only resolves the distribution and prints the version.
+        working-directory: Android
+        run: ./gradlew --version --no-daemon
+
       - name: Build shared XCFramework
         run: ./scripts/build-xcframework.sh
 
