@@ -55,8 +55,19 @@ jobs:
           exit 1
 
       - name: Run shared tests and build Android
+        # Surface the tail of the build log as annotations while the failure
+        # is pinned down; the full log still goes to the step.
         working-directory: Android
-        run: ./gradlew :shared:jvmTest :app:assembleDebug --stacktrace --no-daemon
+        run: |
+          set +e
+          ./gradlew :shared:jvmTest :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/gradle.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            tail -n 15 /tmp/gradle.log | while IFS= read -r line; do
+              printf '::error::%s\n' "$line"
+            done
+            exit "$status"
+          fi
 
   icons:
     name: Generated icon check
