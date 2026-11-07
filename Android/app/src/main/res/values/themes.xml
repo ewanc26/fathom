@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Compose owns every surface in this app, so the platform theme only has
+        to avoid a white flash before the first frame. It is the dark platform
+        theme rather than a DayNight one because Fathom is dark-only by design:
+        the teal palette is chosen against a deep surface and a light variant
+        would be a different design, not a recolour.
+    -->
+    <style name="Theme.Fathom" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/fathom_background</item>
+        <item name="android:statusBarColor">@color/fathom_background</item>
+        <item name="android:navigationBarColor">@color/fathom_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
