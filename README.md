@@ -59,6 +59,9 @@ research behind reading the repo at all.
 - **Refresh** — pull down on any screen, or use the Refresh action, to read
   the repo again without relaunching. The figures already on screen stay while
   the new read arrives.
+- **Background reads** — the dashboard fills in as pages arrive, and the reading
+  banner can be dismissed without stopping the read. The next read brings the
+  banner back.
 - Reads both `fm.teal.*` and the pre-migration `fm.teal.alpha.*` namespace, so
   an account mid-migration keeps its older history.
 - Works for any account on any PDS: the DID is resolved through the PLC

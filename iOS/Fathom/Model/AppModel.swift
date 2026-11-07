@@ -28,6 +28,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var periodId: String
     @Published private(set) var snapshot: DashboardSnapshot?
     @Published private(set) var loading = false
+    /// Dismissal is per read: hiding the banner does not cancel the read, and
+    /// the next read starts with the banner visible again.
+    @Published private(set) var readingStatusDismissed = false
     @Published private(set) var connecting = false
     @Published var error: String?
 
@@ -75,6 +78,7 @@ final class AppModel: ObservableObject {
         }
 
         connecting = true
+        readingStatusDismissed = false
         error = nil
         defer { connecting = false }
 
@@ -118,6 +122,7 @@ final class AppModel: ObservableObject {
     func refresh() async {
         guard let identity, !loading else { return }
         loading = true
+        readingStatusDismissed = false
         error = nil
 
         loadToken += 1
@@ -176,7 +181,14 @@ final class AppModel: ObservableObject {
         defaults.removeObject(forKey: Self.identityKey)
         identity = nil
         snapshot = nil
+        readingStatusDismissed = false
         error = nil
+    }
+
+    /// Hides the reading banner without cancelling the read. Pages keep
+    /// arriving and the screens keep replacing their figures.
+    func dismissReadingStatus() {
+        readingStatusDismissed = true
     }
 
     func dismissError() {

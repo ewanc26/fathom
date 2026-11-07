@@ -2,6 +2,7 @@ package uk.ewancroft.fathom.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,12 +10,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -172,7 +175,7 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
                 }
             }
 
-            if (state.loading && dashboard != null) {
+            if (state.loading && dashboard != null && !state.readingStatusDismissed) {
                 // A long read needs a quantity, not just motion: "reading" with
                 // no count looks the same at four hundred plays as at twenty
                 // thousand, and the difference is six seconds versus two
@@ -180,15 +183,26 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
                 Column(Modifier.fillMaxWidth().align(Alignment.TopCenter)) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Text(
-                            text = "Reading history — " +
-                                "${CountText.compact(dashboard.plays.size)} plays so far",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
-                        )
+                                .padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "Reading history — " +
+                                    "${CountText.compact(dashboard.plays.size)} plays so far",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = viewModel::dismissReadingStatus) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Dismiss reading status",
+                                )
+                            }
+                        }
                     }
                 }
             }
