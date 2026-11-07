@@ -1,0 +1,87 @@
+# The iOS project is generated, not checked in.
+#
+# A checked-in .xcodeproj is a 900-line file that every merge conflicts on and
+# that no diff can be read in. This spec is the source: `xcodegen generate`
+# inside iOS/ rebuilds the project, and the .xcodeproj stays gitignored.
+#
+# The shared core arrives as an XCFramework built by
+# ../scripts/build-xcframework.sh, which must have been run at least once.
+
+name: Fathom
+
+options:
+  bundleIdPrefix: uk.ewancroft
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    # The framework script touches files outside the project directory, which
+    # the script-sandbox refuses by default.
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    SWIFT_STRICT_CONCURRENCY: minimal
+    # The XCFramework carries one simulator slice, arm64. Xcode refuses to
+    # combine arm64 and x86_64 simulator slices as "two equivalent library
+    # definitions", so an Intel Mac cannot link the shared core and says so
+    # here rather than at the linker.
+    EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+
+targets:
+  Fathom:
+    type: application
+    platform: iOS
+    sources:
+      - path: Fathom
+    dependencies:
+      # Static Kotlin/Native framework: link it, do not embed it.
+      - framework: ../shared/FathomShared.xcframework
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.ewancroft.fathom
+        PRODUCT_NAME: Fathom
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_EMIT_LOC_STRINGS: YES
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Fathom
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+
+  FathomTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: FathomTests
+    dependencies:
+      - target: Fathom
+      - framework: ../shared/FathomShared.xcframework
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.ewancroft.fathom.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Fathom:
+    build:
+      targets:
+        Fathom: all
+        FathomTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FathomTests
