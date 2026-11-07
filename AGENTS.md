@@ -86,7 +86,7 @@ cd Android && ./gradlew :app:assembleDebug
 # iOS: framework, project, build
 ./scripts/build-xcframework.sh
 cd iOS && xcodegen generate
-xcodebuild -project Fathom.xcodeproj -scheme Fathom \\
+xcodebuild -project Fathom.xcodeproj -scheme Fathom \
   -destination 'platform=iOS Simulator,name=<installed device>' build test
 ```
 
