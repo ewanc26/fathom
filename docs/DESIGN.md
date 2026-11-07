@@ -69,6 +69,19 @@ that is right beats two that are guesses.
 Hierarchy is carried by size and weight, not by colour alone: every number is
 larger than its label, and no state is indicated only by hue.
 
+## The mark
+
+The app icon is the dashboard's own chart: five bottom-aligned bars, the
+tallest in mint and the rest in the bright teal. It borrows the family's
+construction rather than its letterform — one centred geometric mark, flat
+colour, no text — because Inkwell's letter belongs to Inkwell.
+
+iOS gets one opaque 1024×1024 square with no baked corners or shadow, so the
+system can mask it and apply its own dark and tinted treatments. Android uses
+108 dp adaptive layers, keeps the mark inside the 66 dp safe zone, and ships a
+monochrome layer for themed icons. `scripts/gen-icon.py` draws the bitmap and
+both vector layers from the same coordinates, so the two cannot drift.
+
 ## Platform fidelity
 
 The same four screens, drawn with each platform's own conventions:
