@@ -55,17 +55,30 @@ jobs:
           exit 1
 
       - name: Run shared tests and build Android
-        # Surface the tail of the build log as annotations while the failure
-        # is pinned down; the full log still goes to the step.
+        # While the remaining failure is pinned down, distil the build log
+        # into annotations and the step summary (both public; raw logs are
+        # sign-in only).
         working-directory: Android
         run: |
           set +e
           ./gradlew :shared:jvmTest :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/gradle.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            tail -n 15 /tmp/gradle.log | while IFS= read -r line; do
+            {
+              grep -E '^> Task .* FAILED' /tmp/gradle.log | head -n 3 || true
+              sed -n '/^\* What went wrong:/,/^\* Try:/p' /tmp/gradle.log | head -n 12
+              grep -E '^e: ' /tmp/gradle.log | head -n 4 || true
+              grep -E '^Caused by: ' /tmp/gradle.log | head -n 3 || true
+            } > /tmp/failure.txt
+            {
+              echo '### Android build failure'
+              echo '```'
+              cat /tmp/failure.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+            while IFS= read -r line; do
               printf '::error::%s\n' "$line"
-            done
+            done < /tmp/failure.txt
             exit "$status"
           fi
 
