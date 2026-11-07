@@ -4,6 +4,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uk.ewancroft.fathom.shared.TealJson
+import uk.ewancroft.fathom.shared.cache.CachedHistory
 import uk.ewancroft.fathom.shared.model.Play
 import uk.ewancroft.fathom.shared.model.TealProfile
 import uk.ewancroft.fathom.shared.model.TealStatus
@@ -184,6 +185,47 @@ class FathomRepository(private val client: TealClient = TealClient()) {
             period = period,
             sampled = dashboard.sampled,
         ),
+    )
+
+    /** The cache entry for a completed read of [identity]. */
+    fun toCache(identity: String, dashboard: Dashboard, savedAtEpochSeconds: Long): CachedHistory =
+        CachedHistory(
+            identity = identity,
+            did = dashboard.did,
+            handle = dashboard.handle,
+            profile = dashboard.profile,
+            status = dashboard.status,
+            plays = dashboard.plays,
+            skipped = dashboard.skippedRecords,
+            legacy = dashboard.usedLegacyNamespace,
+            sampled = dashboard.sampled,
+            savedAtEpochSeconds = savedAtEpochSeconds,
+        )
+
+    /**
+     * A saved history, restatted for the period on screen.
+     *
+     * The saved copy keeps the read's `sampled` flag: a history that stopped
+     * at the guard or on a failed page is still drawn, still labelled partial,
+     * and still refreshed behind that label.
+     */
+    fun fromCache(
+        cached: CachedHistory,
+        period: Period,
+        nowEpochSeconds: Long = System.currentTimeMillis() / 1_000L,
+        tzOffsetMinutes: Int = currentOffsetMinutes(nowEpochSeconds),
+    ): Dashboard = snapshot(
+        did = cached.did,
+        handle = cached.handle,
+        profile = cached.profile,
+        status = cached.status,
+        plays = cached.plays,
+        period = period,
+        nowEpochSeconds = nowEpochSeconds,
+        tzOffsetMinutes = tzOffsetMinutes,
+        sampled = cached.sampled,
+        skipped = cached.skipped,
+        legacy = cached.legacy,
     )
 
     /** Orders plays newest first and computes the figures for [period]. */

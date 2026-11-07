@@ -1,6 +1,8 @@
 package uk.ewancroft.fathom.shared
 
 import uk.ewancroft.fathom.shared.auth.Provenance
+import uk.ewancroft.fathom.shared.cache.CachedHistory
+import uk.ewancroft.fathom.shared.cache.HistoryCache
 import uk.ewancroft.fathom.shared.format.CountText
 import uk.ewancroft.fathom.shared.format.DurationText
 import uk.ewancroft.fathom.shared.format.RelativeTime
@@ -78,6 +80,43 @@ object FathomCore {
 
     fun errorDetail(json: String): String? = TealJson.decodeError(json)
 
+    // ── Saved history ───────────────────────────────────────────────────
+
+    /**
+     * The cache file for one completed read, as JSON.
+     *
+     * The plays list can run to tens of thousands of records, so this is the
+     * one call in the facade worth keeping off the main thread.
+     */
+    fun encodeHistory(
+        identity: String,
+        did: String,
+        handle: String?,
+        profile: TealProfile?,
+        status: TealStatus?,
+        plays: List<Play>,
+        skipped: Int,
+        legacy: Boolean,
+        sampled: Boolean,
+        savedAtEpochSeconds: Long,
+    ): String = HistoryCache.encode(
+        CachedHistory(
+            identity = identity,
+            did = did,
+            handle = handle,
+            profile = profile,
+            status = status,
+            plays = plays,
+            skipped = skipped,
+            legacy = legacy,
+            sampled = sampled,
+            savedAtEpochSeconds = savedAtEpochSeconds,
+        ),
+    )
+
+    /** The saved history in [json], or null when it is unusable. */
+    fun decodeHistory(json: String): CachedHistory? = HistoryCache.decode(json)
+
     // ── Collections ──────────────────────────────────────────────────────
 
     fun playCollections(): List<String> = TealCollections.PLAYS
@@ -148,7 +187,16 @@ object FathomCore {
     fun playCeiling(): Int = MAX_PLAYS
 
     fun listRecordsQuery(repo: String, collection: String, cursor: String?, limit: Int): String =
-        listRecordsQuery(repo = repo, collection = collection, cursor = cursor, limit = limit)
+        // Fully qualified on purpose: inside this object the unqualified name
+        // is this function, so a facade that "delegates" without the package
+        // calls itself until the stack guard stops it. That is a crash on the
+        // first network read, and one no unit test had exercised.
+        uk.ewancroft.fathom.shared.xrpc.listRecordsQuery(
+            repo = repo,
+            collection = collection,
+            cursor = cursor,
+            limit = limit,
+        )
 
     fun getRecordQuery(repo: String, collection: String, rkey: String): String =
         XrpcQuery()

@@ -32,6 +32,7 @@ struct ConnectView: View {
                     .background(FathomPalette.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .disabled(model.connecting)
+                    .accessibilityIdentifier("handleField")
                     .padding(.top, 10)
 
                 Text("Handle or DID")
@@ -47,6 +48,7 @@ struct ConnectView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.connecting || input.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityIdentifier("connectButton")
 
                 if let error = model.error {
                     NoticeBox(text: error)

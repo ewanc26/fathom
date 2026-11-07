@@ -161,6 +161,24 @@ struct DashboardLoader {
         )
     }
 
+    /// A saved history, restatted for the period on screen.
+    ///
+    /// The saved flag travels: a history that stopped at the guard or on a
+    /// failed page reopens labelled partial, not passed off as a total.
+    func restore(_ cached: CachedHistory, periodId: String) -> DashboardSnapshot {
+        snapshot(
+            did: cached.did,
+            handle: cached.handle,
+            profile: cached.profile,
+            status: cached.status,
+            plays: cached.plays,
+            periodId: periodId,
+            sampled: cached.sampled,
+            skipped: Int(cached.skipped),
+            legacy: cached.legacy
+        )
+    }
+
     /// Orders plays newest first and computes the figures for [periodId].
     private func snapshot(
         did: String,

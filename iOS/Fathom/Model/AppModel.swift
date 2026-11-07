@@ -32,6 +32,7 @@ final class AppModel: ObservableObject {
     @Published var error: String?
 
     private let loader = DashboardLoader(client: TealClient())
+    private let store = HistoryStore()
     private let defaults: UserDefaults
 
     /// Bumped whenever a load starts or the account is dropped, so a read that
@@ -50,7 +51,17 @@ final class AppModel: ObservableObject {
     }
 
     func start() async {
-        guard identity != nil, snapshot == nil else { return }
+        guard let identity, snapshot == nil else { return }
+
+        // The saved copy paints the dashboard before the network is asked
+        // anything; refresh then replaces it page by page. A file for another
+        // account, or one that cannot be read, is simply not used.
+        if let text = store.read(),
+           let cached = FathomCore.shared.decodeHistory(json: text),
+           cached.identity == identity {
+            snapshot = loader.restore(cached, periodId: periodId)
+        }
+
         await refresh()
     }
 
@@ -93,6 +104,7 @@ final class AppModel: ObservableObject {
             identity = trimmed
             snapshot = loaded
             loading = false
+            save(loaded, identity: trimmed)
         } catch is CancellationError {
             // A newer load replaced this one; there is no error to report.
             return
@@ -117,14 +129,21 @@ final class AppModel: ObservableObject {
                 periodId: periodId,
                 onProgress: { [weak self] partial in
                     // Keep the screens on the newest complete picture while
-                    // the rest of the history arrives.
+                    // the rest of the history arrives. The loader's first
+                    // publish carries the profile and no plays yet, so letting
+                    // it through would blank a saved fifty-thousand-play
+                    // snapshot the moment the refresh started.
                     guard let self, self.loadToken == token else { return }
+                    if let current = self.snapshot, partial.plays.count < current.plays.count {
+                        return
+                    }
                     self.snapshot = partial
                 }
             )
             guard loadToken == token else { return }
             snapshot = loaded
             loading = false
+            save(loaded, identity: identity)
         } catch is CancellationError {
             loading = false
         } catch {
@@ -153,6 +172,7 @@ final class AppModel: ObservableObject {
     func disconnect() {
         loadToken += 1
         loading = false
+        store.clear()
         defaults.removeObject(forKey: Self.identityKey)
         identity = nil
         snapshot = nil
@@ -161,5 +181,30 @@ final class AppModel: ObservableObject {
 
     func dismissError() {
         error = nil
+    }
+
+    /// Writes a read for the next launch, complete or not.
+    ///
+    /// The snapshot's completeness flag is saved with it, so a history that
+    /// stopped at the guard or on a failed page reopens as exactly that: the
+    /// plays it did read, still labelled partial, with a refresh behind them.
+    /// Encoding tens of thousands of plays happens off the main actor;
+    /// nothing waits for the file.
+    private func save(_ snapshot: DashboardSnapshot, identity: String) {
+        let json = FathomCore.shared.encodeHistory(
+            identity: identity,
+            did: snapshot.did,
+            handle: snapshot.handle,
+            profile: snapshot.profile,
+            status: snapshot.status,
+            plays: snapshot.plays,
+            skipped: Int32(snapshot.skipped),
+            legacy: snapshot.usedLegacyNamespace,
+            sampled: snapshot.sampled,
+            savedAtEpochSeconds: Int64(Date().timeIntervalSince1970)
+        )
+
+        let store = self.store
+        Task.detached(priority: .utility) { store.write(json) }
     }
 }

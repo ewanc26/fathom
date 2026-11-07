@@ -135,8 +135,9 @@ fun ProfileScreen(dashboard: Dashboard, onDisconnect: () -> Unit) {
         }
 
         Text(
-            text = "Fathom keeps no copy of your listening. Disconnecting forgets the " +
-                "handle and nothing else.",
+            text = "Fathom keeps one copy of your public history on this device so " +
+                "the next launch opens instantly. Disconnecting deletes it along with " +
+                "the handle.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

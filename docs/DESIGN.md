@@ -56,8 +56,8 @@ claims otherwise.
 Who the dashboard is about, and what it is reading. The account panel states
 the DID, the handle, how many plays were read and whether a teal profile record
 exists. The method panel states the namespace rule and the local-computation
-rule in plain sentences. Disconnect is the only action, and it forgets the
-handle and nothing else.
+rule in plain sentences. Disconnect is the only action; it deletes the saved
+history and forgets the handle.
 
 ## Colour and type
 

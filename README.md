@@ -52,6 +52,10 @@ research behind reading the repo at all.
   and the length each record declared.
 - **Profile** — the teal.fm profile record, featured item, DID, and a plain
   statement of where the figures come from.
+- **Saved history** — a completed read is written to app-private storage, so a
+  second launch draws the dashboard immediately and refreshes behind it. A
+  saved copy keeps the read's completeness label, so a partial history is
+  still labelled partial when it reopens.
 - Reads both `fm.teal.*` and the pre-migration `fm.teal.alpha.*` namespace, so
   an account mid-migration keeps its older history.
 - Works for any account on any PDS: the DID is resolved through the PLC
@@ -121,17 +125,26 @@ them.
 - Android has no unit tests of its own: everything worth testing is in the
   shared core, and the app's remaining logic is transport and layout.
 
-No hardware or emulator validation has been performed. The Android app builds
-as a debug APK and the iOS app builds for the simulator; neither has been run
-on a device.
+Both apps have been run against a real account (`ewancroft.uk`) on an Android
+emulator and an iOS simulator. That run is what found a facade method that
+called itself and crashed the first network read, and what established that
+the account holds more than the 50,000-play guard: the read stops there, the
+screens say the figures are partial, and the saved copy keeps that label.
+
+The iOS account run lives in `iOS/FathomUITests/` and in the `FathomAccount`
+scheme, separate from the default scheme because it needs the public network
+and about five minutes.
 
 ## Limitations
 
 - **Read-only.** There is no scrobbling, no profile editing and no status
   writing. `website/client-metadata.json` records the scopes those would need.
 - **Long first loads.** The history is read a hundred plays at a time, so an
-  account with thousands of plays takes a while to open. The guard stops at
-  50,000 plays, and anything read short of the end is labelled partial.
+  account with tens of thousands of plays takes minutes to read the first
+  time; the dashboard opens on the newest page and counts the plays it has
+  reached while the rest arrive. Later launches open from the saved copy while
+  that read runs again. The guard stops at 50,000 plays, and anything read
+  short of the end is labelled partial.
 - **Figures are local.** They are computed from this repo, not from teal.fm's
   network-wide stats endpoints, and the two are not the same measurement.
 - **No OAuth.** None is needed to read, and a half-implemented flow would be

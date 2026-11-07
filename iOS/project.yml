@@ -59,6 +59,20 @@ targets:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
 
+  # Not part of the default scheme: it needs the public network and minutes
+  # of paging against a real repo. Run it with `-scheme FathomAccount`.
+  FathomUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: FathomUITests
+    dependencies:
+      - target: Fathom
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.ewancroft.fathom.uitests
+        GENERATE_INFOPLIST_FILE: YES
+
   FathomTests:
     type: bundle.unit-test
     platform: iOS
@@ -85,3 +99,15 @@ schemes:
       config: Debug
       targets:
         - FathomTests
+
+  FathomAccount:
+    build:
+      targets:
+        Fathom: all
+        FathomUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FathomUITests
