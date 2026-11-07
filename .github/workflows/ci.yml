@@ -55,32 +55,8 @@ jobs:
           exit 1
 
       - name: Run shared tests and build Android
-        # While the remaining failure is pinned down, distil the build log
-        # into annotations and the step summary (both public; raw logs are
-        # sign-in only).
         working-directory: Android
-        run: |
-          set +e
-          ./gradlew :shared:jvmTest :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/gradle.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            {
-              grep -E '^> Task .* FAILED' /tmp/gradle.log | head -n 3 || true
-              sed -n '/^\* What went wrong:/,/^\* Try:/p' /tmp/gradle.log | head -n 12
-              grep -E '^e: ' /tmp/gradle.log | head -n 4 || true
-              grep -E '^Caused by: ' /tmp/gradle.log | head -n 3 || true
-            } > /tmp/failure.txt
-            {
-              echo '### Android build failure'
-              echo '```'
-              cat /tmp/failure.txt
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-            while IFS= read -r line; do
-              printf '::error::%s\n' "$line"
-            done < /tmp/failure.txt
-            exit "$status"
-          fi
+        run: ./gradlew :shared:jvmTest :app:assembleDebug --stacktrace --no-daemon
 
   icons:
     name: Generated icon check
@@ -137,25 +113,10 @@ jobs:
           ls -la "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" >&2 2>/dev/null || true
           exit 1
 
-      - name: Verify Gradle wrapper
-        # Bisects wrapper download vs configuration failures on the macOS
-        # runner: this only resolves the distribution and prints the version.
-        working-directory: Android
-        run: ./gradlew --version --no-daemon
-
       - name: Build shared XCFramework
-        # Surface the tail of the build log as annotations: the step log needs
-        # sign-in, annotations show on the public summary.
-        run: |
-          set +e
-          bash ./scripts/build-xcframework.sh 2>&1 | tee /tmp/xcframework.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            tail -n 15 /tmp/xcframework.log | while IFS= read -r line; do
-              printf '::error::%s\n' "$line"
-            done
-            exit "$status"
-          fi
+        # Invoked through bash because the executable bit was lost when the
+        # script was pushed through the API; a local chmod +x can restore it.
+        run: bash ./scripts/build-xcframework.sh
 
       - name: Generate Xcode project
         working-directory: iOS
