@@ -14,6 +14,15 @@ import uk.ewancroft.fathom.shared.xrpc.listRecordsQuery
 open class FathomException(message: String) : Exception(message)
 
 /**
+ * A 400 or 404: the record or collection is not there.
+ *
+ * Absence is an answer rather than a failure — an account with no status and
+ * no legacy plays are both normal — so it travels as its own type and the
+ * caller decides whether that means `null` or an empty namespace.
+ */
+class FathomNotFoundException(message: String) : FathomException(message)
+
+/**
  * Every HTTP call Fathom makes.
  *
  * Three services are involved and they are not interchangeable:
@@ -135,8 +144,6 @@ class TealClient(
             )
         }
     }
-
-    private class FathomNotFoundException(message: String) : FathomException(message)
 
     private companion object {
         const val PUBLIC_APPVIEW = "https://public.api.bsky.app"

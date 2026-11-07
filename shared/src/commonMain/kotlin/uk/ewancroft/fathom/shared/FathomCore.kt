@@ -15,6 +15,7 @@ import uk.ewancroft.fathom.shared.stats.StatsCalculator
 import uk.ewancroft.fathom.shared.time.CivilDays
 import uk.ewancroft.fathom.shared.time.IsoInstant
 import uk.ewancroft.fathom.shared.xrpc.MAX_PAGE
+import uk.ewancroft.fathom.shared.xrpc.MAX_PLAYS
 import uk.ewancroft.fathom.shared.xrpc.TealCollections
 import uk.ewancroft.fathom.shared.xrpc.Xrpc
 import uk.ewancroft.fathom.shared.xrpc.XrpcQuery
@@ -142,6 +143,9 @@ object FathomCore {
     fun resolveHandlePath(): String = Xrpc.path(Xrpc.RESOLVE_HANDLE)
 
     fun maxPage(): Int = MAX_PAGE
+
+    /** The ceiling on plays one load reads, so the native paging loops agree. */
+    fun playCeiling(): Int = MAX_PLAYS
 
     fun listRecordsQuery(repo: String, collection: String, cursor: String?, limit: Int): String =
         listRecordsQuery(repo = repo, collection = collection, cursor = cursor, limit = limit)

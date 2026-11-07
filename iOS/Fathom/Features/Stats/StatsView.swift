@@ -157,7 +157,11 @@ struct StatsView: View {
     private func provenancePanel(_ snapshot: DashboardSnapshot) -> some View {
         var notes = [FathomCore.shared.provenanceComputedLocally()]
         if snapshot.sampled {
-            notes.append("Only the most recent plays were read, so this is not an all-time total")
+            notes.append(
+                model.loading
+                    ? "Still reading the rest of the history; these figures will grow"
+                    : "Only part of the history was read, so this is not a complete total"
+            )
         }
         if snapshot.skipped > 0 {
             notes.append("\(snapshot.skipped) unreadable records were skipped")

@@ -20,11 +20,14 @@ dashboard built on those endpoints would be a dashboard that mostly does not
 load.
 
 Every play is in the repo, so Fathom reads `com.atproto.repo.listRecords` from
-the account's PDS and aggregates on the device. The trade is bounded reads: up
-to 1,000 plays are fetched, and when the repo holds more, the screens say the
-figures cover only the most recent plays instead of presenting them as totals.
-See [`docs/PROTOCOL.md`](docs/PROTOCOL.md) for the research behind that
-decision.
+the account's PDS and aggregates on the device, a hundred records at a time,
+until the repo runs out. Reading all of it is what makes "All time" a total
+rather than the newest slice. A page costs about half a second on a real data
+server, so a long history would be minutes of waiting: the dashboard opens on
+the newest page and its figures grow as the rest arrives. A runaway guard stops
+at 50,000 plays, and a read that ends early is labelled partial rather than
+passed off as complete. See [`docs/PROTOCOL.md`](docs/PROTOCOL.md) for the
+research behind reading the repo at all.
 
 ## Repository structure
 
@@ -126,8 +129,9 @@ on a device.
 
 - **Read-only.** There is no scrobbling, no profile editing and no status
   writing. `website/client-metadata.json` records the scopes those would need.
-- **Bounded reads.** At most 1,000 plays per load. "All time" then means "all
-  time, up to what was read", and the UI says so.
+- **Long first loads.** The history is read a hundred plays at a time, so an
+  account with thousands of plays takes a while to open. The guard stops at
+  50,000 plays, and anything read short of the end is labelled partial.
 - **Figures are local.** They are computed from this repo, not from teal.fm's
   network-wide stats endpoints, and the two are not the same measurement.
 - **No OAuth.** None is needed to read, and a half-implemented flow would be

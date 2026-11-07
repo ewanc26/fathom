@@ -3,6 +3,8 @@ import FathomShared
 
 struct FathomError: LocalizedError {
     let message: String
+    /// True when the server answered 400 or 404: absence rather than failure.
+    var absent = false
     var errorDescription: String? { message }
 }
 
@@ -91,12 +93,10 @@ struct TealClient {
         let query = FathomCore.shared.getRecordQuery(repo: repo, collection: collection, rkey: rkey)
         do {
             return try await get(pds + FathomCore.shared.getRecordPath() + "?" + query, notFound: nil)
-        } catch let failure as FathomError where failure.message == absenceMarker {
+        } catch let failure as FathomError where failure.absent {
             return nil
         }
     }
-
-    private let absenceMarker = "\u{0}absent"
 
     private func get(_ urlString: String, notFound: String?) async throws -> String {
         guard let url = URL(string: urlString) else {
@@ -123,8 +123,10 @@ struct TealClient {
         let detail = FathomCore.shared.errorDetail(json: body)
 
         if status == 400 || status == 404 {
-            if let notFound { throw FathomError(message: notFound) }
-            throw FathomError(message: absenceMarker)
+            throw FathomError(
+                message: notFound ?? "That record does not exist.",
+                absent: true
+            )
         }
 
         throw FathomError(

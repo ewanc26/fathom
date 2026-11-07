@@ -64,19 +64,35 @@ The same applies to `IsoInstant`, `CivilDays` and the formatters: no platform
 types, no `java.time`, no `Foundation`, no `expect/actual`. Common code with no
 platform dependency is common code that cannot behave differently.
 
-## Bounded everything
+## Reading everything, with brakes
 
-- **Plays**: 1,000 per load, ten pages of a hundred. The dashboard is marked
-  `sampled` when the cap is reached and every screen that shows a total says
-  so.
+- **Plays**: every play in the repo, a hundred at a time, until the cursor
+  runs out. That is what lets "All time" be a total.
+- **The guard**: fifty thousand plays. A runaway guard rather than a product
+  limit, because a decade of heavy listening is the point at which the list
+  costs more memory than a dashboard is worth.
+- **Partial reads**: `sampled` means the read ended early — the guard, a failed
+  page, or a cursor that did not advance — and every screen showing a total
+  says the figures are partial. A 400 or 404 for a collection is *not* partial:
+  it is an empty namespace, which is the normal state for an account on either
+  side of the migration.
+- **Progressive**: the profile, the status and the newest page render as soon
+  as they arrive; the remaining pages continue in the background and the
+  figures grow until the read finishes. A page cost about 585 ms on a real PDS,
+  so a twenty-thousand-play history is roughly two minutes — showing a spinner
+  for that long would look like a broken app.
+- **Period changes**: recomputed from the plays already in memory. Only Refresh
+  reads the repo again.
+- **Cancellation**: a superseded load stops rather than finishing into a
+  snapshot nobody asked for.
 - **History**: the same list, not a second fetch.
 - **Chart**: fourteen contiguous days, zero-filled, so an empty day is a stub
   rather than a missing bar.
 - **Leaders**: five artists and five releases.
 - **Partial pages**: a record that does not decode is counted and skipped.
 
-There is no unbounded collection in the app, and no cache: the repo is the
-cache, and refetching is cheap and correct.
+There is no cache: the repo is the cache, and refetching is correct, if no
+longer cheap.
 
 ## Failure
 

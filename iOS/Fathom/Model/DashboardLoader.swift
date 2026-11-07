@@ -5,14 +5,28 @@ import FathomShared
 ///
 /// teal.fm's hosted stats endpoints are not reliably deployed, and the plays
 /// are in the person's own repo anyway, so the figures are computed from
-/// records. The cost is a bounded read: once the cap is reached the snapshot
-/// is marked `sampled` and the screens say so.
+/// records. Every page is read, because a total computed from the newest
+/// thousand plays is not a total. A page costs roughly half a second on a real
+/// PDS, so the newest page is published as soon as it arrives and the rest
+/// follow: a long history fills in rather than freezing the app.
 struct DashboardLoader {
     let client: TealClient
 
-    static let maxPlays = 1_000
+    /// A runaway guard, not a product limit. See `MAX_PLAYS` in the core.
+    static let playCeiling = Int(FathomCore.shared.playCeiling())
 
-    func load(identity raw: String, periodId: String) async throws -> DashboardSnapshot {
+    /// A thousand plays between screen updates: about six seconds of reading.
+    static let progressEveryPages = 10
+
+    /// Reads [raw]'s history, calling [onProgress] with the profile and status
+    /// as soon as they arrive and then every `progressEveryPages` pages. Those
+    /// snapshots are marked `sampled`; the returned one is sampled only if the
+    /// read ended early.
+    func load(
+        identity raw: String,
+        periodId: String,
+        onProgress: @escaping @MainActor (DashboardSnapshot) -> Void
+    ) async throws -> DashboardSnapshot {
         let did = try await client.resolveIdentity(raw)
         let pds = try await client.pds(for: did)
         let handle = raw.hasPrefix("did:") ? nil : raw
@@ -20,14 +34,37 @@ struct DashboardLoader {
         let profile = await loadProfile(pds: pds, did: did)
         let status = await loadStatus(pds: pds, did: did)
 
+        let collections = FathomCore.shared.playCollections()
         var plays: [Play] = []
         var skipped = 0
         var usedLegacy = false
+        var complete = true
+        var pages = 0
 
-        for collection in FathomCore.shared.playCollections() {
-            if plays.count >= Self.maxPlays { break }
+        // The account and what it is playing are known before a play is read,
+        // so they go on screen first.
+        await onProgress(
+            snapshot(
+                did: did,
+                handle: handle,
+                profile: profile,
+                status: status,
+                plays: plays,
+                periodId: periodId,
+                sampled: true,
+                skipped: skipped,
+                legacy: usedLegacy
+            )
+        )
+
+        for collection in collections {
             var cursor: String?
-            repeat {
+            while true {
+                if plays.count >= Self.playCeiling {
+                    complete = false
+                    break
+                }
+
                 let json: String
                 do {
                     json = try await client.listRecords(
@@ -37,35 +74,113 @@ struct DashboardLoader {
                         cursor: cursor,
                         limit: Int(FathomCore.shared.maxPage())
                     )
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch let failure as URLError where failure.code == .cancelled {
+                    // Nobody is waiting for this read any more; that is not
+                    // the same thing as a history that ran out.
+                    throw CancellationError()
+                } catch let failure as FathomError where failure.absent {
+                    // Nothing in this namespace. An account mid-migration can
+                    // hold one and not the other, which is not a partial
+                    // history.
+                    break
                 } catch {
-                    // One namespace failing must not lose the other: an
-                    // account mid-migration can hold both.
+                    // Keep what was read, but stop claiming it is the lot.
+                    complete = false
                     break
                 }
 
                 let page = FathomCore.shared.playsPage(json: json)
-                guard page.parsed else { break }
-                if collection == FathomCore.shared.playCollections().last, !page.plays.isEmpty {
+                guard page.parsed else {
+                    complete = false
+                    break
+                }
+                if collection == collections.last, !page.plays.isEmpty {
                     usedLegacy = true
                 }
                 skipped += Int(page.skipped)
                 plays.append(contentsOf: page.plays)
-                cursor = page.cursor
-            } while cursor != nil && plays.count < Self.maxPlays
+
+                pages += 1
+                if pages % Self.progressEveryPages == 0 {
+                    await onProgress(
+                        snapshot(
+                            did: did,
+                            handle: handle,
+                            profile: profile,
+                            status: status,
+                            plays: plays,
+                            periodId: periodId,
+                            sampled: true,
+                            skipped: skipped,
+                            legacy: usedLegacy
+                        )
+                    )
+                }
+
+                guard let next = page.cursor, next != cursor else {
+                    // A server that repeats a cursor would otherwise page
+                    // until the guard stopped it.
+                    if page.cursor != nil { complete = false }
+                    break
+                }
+                cursor = next
+            }
         }
 
-        let ordered = plays
-            .sorted { lhs, rhs in
-                FathomCore.shared.instant(raw: lhs.playedTime)
-                    > FathomCore.shared.instant(raw: rhs.playedTime)
-            }
-            .prefix(Self.maxPlays)
+        return snapshot(
+            did: did,
+            handle: handle,
+            profile: profile,
+            status: status,
+            plays: plays,
+            periodId: periodId,
+            sampled: !complete,
+            skipped: skipped,
+            legacy: usedLegacy
+        )
+    }
 
-        let sampled = plays.count >= Self.maxPlays
-        let now = Int64(Date().timeIntervalSince1970)
+    /// The same snapshot for a different period, without reading the repo.
+    ///
+    /// A period changes the aggregation, not the records: the plays are
+    /// already in memory, and re-reading thousands of them to move a seven-day
+    /// window would make every chip tap cost a minute.
+    func restat(_ snapshot: DashboardSnapshot, periodId: String) -> DashboardSnapshot {
+        self.snapshot(
+            did: snapshot.did,
+            handle: snapshot.handle,
+            profile: snapshot.profile,
+            status: snapshot.status,
+            plays: snapshot.plays,
+            periodId: periodId,
+            sampled: snapshot.sampled,
+            skipped: snapshot.skipped,
+            legacy: snapshot.usedLegacyNamespace
+        )
+    }
+
+    /// Orders plays newest first and computes the figures for [periodId].
+    private func snapshot(
+        did: String,
+        handle: String?,
+        profile: TealProfile?,
+        status: TealStatus?,
+        plays: [Play],
+        periodId: String,
+        sampled: Bool,
+        skipped: Int,
+        legacy: Bool
+    ) -> DashboardSnapshot {
+        let ordered = plays.sorted { lhs, rhs in
+            FathomCore.shared.instant(raw: lhs.playedTime)
+                > FathomCore.shared.instant(raw: rhs.playedTime)
+        }
+
         let stats = FathomCore.shared.computeStats(
-            plays: Array(ordered),
-            nowEpochSeconds: now,
+            plays: ordered,
+            nowEpochSeconds: Int64(Date().timeIntervalSince1970),
             tzOffsetMinutes: Int32(TimeZone.current.secondsFromGMT() / 60),
             periodId: periodId,
             sampled: sampled,
@@ -77,11 +192,11 @@ struct DashboardLoader {
             handle: handle,
             profile: profile,
             status: status,
-            plays: Array(ordered),
+            plays: ordered,
             stats: stats,
             sampled: sampled,
             skipped: skipped,
-            usedLegacyNamespace: usedLegacy
+            usedLegacyNamespace: legacy
         )
     }
 

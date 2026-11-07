@@ -1,5 +1,6 @@
 package uk.ewancroft.fathom.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uk.ewancroft.fathom.shared.TealJson
@@ -11,15 +12,17 @@ import uk.ewancroft.fathom.shared.stats.Period
 import uk.ewancroft.fathom.shared.stats.StatsCalculator
 import uk.ewancroft.fathom.shared.time.IsoInstant
 import uk.ewancroft.fathom.shared.xrpc.MAX_PAGE
+import uk.ewancroft.fathom.shared.xrpc.MAX_PLAYS
 import uk.ewancroft.fathom.shared.xrpc.TealCollections
 
 /**
  * Everything one dashboard render needs.
  *
- * `sampled` means the repo held more plays than the cap allowed us to read,
- * so the figures are over the most recent [FathomRepository.MAX_PLAYS] plays
- * rather than over all of them. The screen must say so; an all-time total
- * that silently drops history is a lie about someone's listening.
+ * `sampled` means the read has not reached the end of the repo — the
+ * [MAX_PLAYS] guard, a failed page, or a cursor that would not advance. While
+ * a read is still running it is true as well, because the figures on screen
+ * really are partial at that moment. The screen must say so; a total that
+ * silently drops history is a lie about someone's listening.
  */
 data class Dashboard(
     val did: String,
@@ -41,16 +44,27 @@ data class Dashboard(
  * stats endpoints (`fm.teal.stats.*`) are not reliably deployed — at the time
  * of writing one public host answers `fm.teal.actor.getStatus` and 404s every
  * stats route — while every play is in the person's own repo and therefore
- * always readable. Figures computed from a bounded slice are labelled as
- * such rather than presented as network totals.
+ * always readable.
+ *
+ * Every page is read, because a total computed from the newest thousand plays
+ * is not a total. A page costs roughly half a second on a real PDS, so a long
+ * history is minutes of requests: the newest page is published as soon as it
+ * arrives and the rest follow, rather than leaving the app on a spinner.
  */
 class FathomRepository(private val client: TealClient = TealClient()) {
 
+    /**
+     * Reads [identity]'s history, calling [onProgress] with a dashboard after
+     * the profile and status arrive and then every [PROGRESS_EVERY_PAGES]
+     * pages. Every dashboard passed to [onProgress] is marked sampled; the
+     * returned one is sampled only if the read ended early.
+     */
     suspend fun load(
         identity: String,
         period: Period,
         nowEpochSeconds: Long = System.currentTimeMillis() / 1_000L,
         tzOffsetMinutes: Int = currentOffsetMinutes(nowEpochSeconds),
+        onProgress: ((Dashboard) -> Unit)? = null,
     ): Dashboard = withContext(Dispatchers.IO) {
         val did = client.resolveIdentity(identity)
         val pds = client.pdsFor(did)
@@ -61,54 +75,148 @@ class FathomRepository(private val client: TealClient = TealClient()) {
 
         var skipped = 0
         var legacy = false
-        val plays = ArrayList<Play>(MAX_PLAYS)
+        var complete = true
+        var pages = 0
+        val plays = ArrayList<Play>()
+
+        fun publish(sampled: Boolean) {
+            onProgress?.invoke(
+                snapshot(
+                    did = did,
+                    handle = handle,
+                    profile = profile,
+                    status = status,
+                    plays = plays,
+                    period = period,
+                    nowEpochSeconds = nowEpochSeconds,
+                    tzOffsetMinutes = tzOffsetMinutes,
+                    sampled = sampled,
+                    skipped = skipped,
+                    legacy = legacy,
+                ),
+            )
+        }
+
+        // The account and what it is playing are known before any play is
+        // read, so they go on screen first.
+        publish(sampled = true)
 
         for (collection in TealCollections.PLAYS) {
-            if (plays.size >= MAX_PLAYS) break
             var cursor: String? = null
-            do {
+            while (true) {
+                if (plays.size >= MAX_PLAYS) {
+                    complete = false
+                    break
+                }
+
                 // A collection that 400s is not a reason to lose the other
                 // namespace: the migration means an account can hold one and
                 // not the other, and an unknown collection is answered
-                // inconsistently across PDS implementations.
-                val page = runCatching {
-                    TealJson.decodePlays(
-                        client.listRecords(pds, did, collection, cursor, MAX_PAGE),
-                    )
-                }.getOrNull() ?: break
-                if (!page.parsed) break
+                // inconsistently across PDS implementations. Absence is an
+                // answer, so it leaves the read complete; a network failure
+                // does not, because the rest of the history is still unread.
+                val response = runCatching {
+                    client.listRecords(pds, did, collection, cursor, MAX_PAGE)
+                }
+                response.exceptionOrNull()?.let { failure ->
+                    if (failure is CancellationException) throw failure
+                    if (failure !is FathomNotFoundException) complete = false
+                }
+                val body = response.getOrNull() ?: break
+
+                val page = TealJson.decodePlays(body)
+                if (!page.parsed) {
+                    complete = false
+                    break
+                }
                 if (collection == TealCollections.ALPHA_PLAY && page.records.isNotEmpty()) {
                     legacy = true
                 }
                 skipped += page.skipped
                 page.values().forEach { plays += it }
-                cursor = page.cursor
-            } while (cursor != null && plays.size < MAX_PLAYS)
+
+                pages++
+                if (pages % PROGRESS_EVERY_PAGES == 0) publish(sampled = true)
+
+                val next = page.cursor ?: break
+                // A server that repeats a cursor would otherwise page until
+                // the guard stopped it.
+                if (next == cursor) {
+                    complete = false
+                    break
+                }
+                cursor = next
+            }
         }
 
-        val ordered = plays
-            .sortedWith(
-                compareByDescending<Play> { IsoInstant.parse(it.playedTime) ?: Long.MIN_VALUE }
-                    .thenByDescending { it.playedTime.orEmpty() },
-            )
-            .take(MAX_PLAYS)
+        snapshot(
+            did = did,
+            handle = handle,
+            profile = profile,
+            status = status,
+            plays = plays,
+            period = period,
+            nowEpochSeconds = nowEpochSeconds,
+            tzOffsetMinutes = tzOffsetMinutes,
+            sampled = !complete,
+            skipped = skipped,
+            legacy = legacy,
+        )
+    }
 
-        val sampled = plays.size >= MAX_PLAYS
-        val stats = StatsCalculator.compute(
-            plays = ordered,
+    /**
+     * The same dashboard for a different period, without reading the repo.
+     *
+     * A period changes the aggregation, not the records: the plays are already
+     * in memory, and re-fetching thousands of them to move a seven-day window
+     * would make every chip tap cost a minute.
+     */
+    fun rerange(
+        dashboard: Dashboard,
+        period: Period,
+        nowEpochSeconds: Long = System.currentTimeMillis() / 1_000L,
+        tzOffsetMinutes: Int = currentOffsetMinutes(nowEpochSeconds),
+    ): Dashboard = dashboard.copy(
+        stats = StatsCalculator.compute(
+            plays = dashboard.plays,
             nowEpochSeconds = nowEpochSeconds,
             tzOffsetMinutes = tzOffsetMinutes,
             period = period,
-            sampled = sampled,
-        )
+            sampled = dashboard.sampled,
+        ),
+    )
 
-        Dashboard(
+    /** Orders plays newest first and computes the figures for [period]. */
+    private fun snapshot(
+        did: String,
+        handle: String?,
+        profile: TealProfile?,
+        status: TealStatus?,
+        plays: List<Play>,
+        period: Period,
+        nowEpochSeconds: Long,
+        tzOffsetMinutes: Int,
+        sampled: Boolean,
+        skipped: Int,
+        legacy: Boolean,
+    ): Dashboard {
+        val ordered = plays.sortedWith(
+            compareByDescending<Play> { IsoInstant.parse(it.playedTime) ?: Long.MIN_VALUE }
+                .thenByDescending { it.playedTime.orEmpty() },
+        )
+        return Dashboard(
             did = did,
             handle = handle,
             profile = profile,
             status = status,
             plays = ordered,
-            stats = stats,
+            stats = StatsCalculator.compute(
+                plays = ordered,
+                nowEpochSeconds = nowEpochSeconds,
+                tzOffsetMinutes = tzOffsetMinutes,
+                period = period,
+                sampled = sampled,
+            ),
             sampled = sampled,
             skippedRecords = skipped,
             usedLegacyNamespace = legacy,
@@ -135,8 +243,8 @@ class FathomRepository(private val client: TealClient = TealClient()) {
     }
 
     companion object {
-        /** The ceiling on plays read for one dashboard. Ten pages of a hundred. */
-        const val MAX_PLAYS = 1_000
+        /** A thousand plays between screen updates: about six seconds of reading. */
+        private const val PROGRESS_EVERY_PAGES = 10
 
         private const val RKEY_SELF = "self"
 

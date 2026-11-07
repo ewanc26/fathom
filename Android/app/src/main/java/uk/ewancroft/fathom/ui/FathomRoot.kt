@@ -131,10 +131,16 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
                     Tab.Stats -> StatsScreen(
                         dashboard = dashboard,
                         period = state.period,
+                        reading = state.loading,
                         onSelectPeriod = viewModel::selectPeriod,
                     )
 
-                    Tab.History -> HistoryScreen(dashboard, now, tz)
+                    Tab.History -> HistoryScreen(
+                        dashboard = dashboard,
+                        nowEpochSeconds = now,
+                        tzOffsetMinutes = tz,
+                        reading = state.loading,
+                    )
                     Tab.Profile -> ProfileScreen(
                         dashboard = dashboard,
                         onDisconnect = viewModel::disconnect,
