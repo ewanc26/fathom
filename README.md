@@ -115,6 +115,16 @@ recolour, so there is only the one. Avatars are monograms: Fathom deliberately
 does not fetch blobs, which keeps the dashboard to one kind of network request
 and avoids decoding arbitrary images.
 
+<p align="center">
+  <img src="docs/images/app-icon.png" alt="Fathom's app icon: five teal bars on a deep teal-black tile" width="180">
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/images/launch-mark.png" alt="Fathom's launch mark: the same five bars on the deep background" width="247">
+</p>
+
+The mark is the dashboard's own chart: five bottom-aligned bars, the tallest in
+mint. The launch screen carries the same bars without the tile, and both are
+drawn from one set of coordinates in `scripts/gen-icon.py`.
+
 [`docs/DESIGN.md`](docs/DESIGN.md) covers the screens and the decisions in
 them.
 
