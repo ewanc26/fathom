@@ -32,6 +32,8 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         val identity: String? = null,
         val period: Period = Period.ThirtyDays,
         val loading: Boolean = false,
+        /** True when the reading banner has been hidden for the current read. */
+        val readingStatusDismissed: Boolean = false,
         val connecting: Boolean = false,
         val dashboard: Dashboard? = null,
         val error: String? = null,
@@ -90,7 +92,9 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
 
-        _state.update { it.copy(connecting = true, error = null) }
+        _state.update {
+            it.copy(connecting = true, readingStatusDismissed = false, error = null)
+        }
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             var saved = false
@@ -164,7 +168,9 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
     fun refresh() {
         val identity = _state.value.identity ?: return
         loadJob?.cancel()
-        _state.update { it.copy(loading = true, error = null) }
+        _state.update {
+            it.copy(loading = true, readingStatusDismissed = false, error = null)
+        }
         loadJob = viewModelScope.launch {
             try {
                 val dashboard = repository.load(
@@ -228,6 +234,11 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         _state.update {
             it.copy(period = period, dashboard = repository.rerange(loaded, period))
         }
+    }
+
+    /** Hides the reading banner without stopping the read. */
+    fun dismissReadingStatus() {
+        _state.update { it.copy(readingStatusDismissed = true) }
     }
 
     fun dismissError() {

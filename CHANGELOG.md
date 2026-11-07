@@ -34,7 +34,8 @@ semantic versioning.
   as the rest of the history arrives, because a full history is minutes of
   requests on a real data server.
 - The read shows how many plays it has reached, so a long history looks like
-  progress rather than a stalled spinner.
+  progress rather than a stalled spinner. The banner can be dismissed without
+  stopping the read, and it returns for the next one.
 - A history is saved on the device, so a second launch paints the dashboard
   at once and refreshes behind it. The saved copy keeps the read's completeness
   flag, so a partial history is still labelled partial when it reopens.
