@@ -1,8 +1,15 @@
 # AGENTS.md
 
-Guidance for agents working on Fathom, a native teal.fm dashboard for iOS and
-Android. This document is the architectural contract; keep it aligned with the
-code.
+Guidance for AI coding agents working in **fathom**.
+
+## Project overview
+
+A native teal.fm client for iOS and Android: a read-only listening dashboard
+over a shared Kotlin Multiplatform core. The write path — live scrobbling to
+the account's own repo — is planned and tracked in the issue tracker.
+
+- Language: Kotlin (Multiplatform core), Swift (iOS UI), Kotlin/Compose (Android UI)
+- Default branch: main
 
 ## Principles
 
@@ -79,7 +86,7 @@ cd Android && ./gradlew :app:assembleDebug
 # iOS: framework, project, build
 ./scripts/build-xcframework.sh
 cd iOS && xcodegen generate
-xcodebuild -project Fathom.xcodeproj -scheme Fathom \
+xcodebuild -project Fathom.xcodeproj -scheme Fathom \\
   -destination 'platform=iOS Simulator,name=<installed device>' build test
 ```
 
@@ -109,3 +116,16 @@ claim hardware you did not use. Neither app has been run on a device.
 Read-only. No OAuth, no writes, no secure storage, no image loading, no cache,
 no database. Four screens fed by one fetch. `website/client-metadata.json`
 records the scopes that a write would need.
+
+## Working rules
+
+- Inspect the README, manifests, CI workflows, and nearby code before editing.
+- Preserve existing architecture, naming, formatting, and error-handling conventions.
+- Use project scripts for validation; never claim checks you did not run.
+- Keep changes scoped and update tests or documentation when behavior changes.
+- Use feature branches and pull requests.
+- Treat generated files, credentials, deployment configuration, and release metadata as sensitive.
+
+## Recent history
+
+ci: add checks for shared, Android, icons and iOS; docs: show the dashboard screens in the README; feat: let the reading status be dismissed; docs: show the icon and launch mark in the README; feat: carry the bar mark into the launch screens; feat(ios): supply explicit dark and tinted icons; feat: give the app an icon on both platforms; feat: read the repo again on a pull; feat: save the history and count it as it loads; feat: read the whole play history rather than the newest thousand
