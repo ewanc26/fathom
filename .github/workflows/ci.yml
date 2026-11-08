@@ -72,6 +72,9 @@ jobs:
       - name: Check version sources
         run: python3 scripts/sync-version.py --check
 
+      - name: Check release scripts parse
+        run: bash -n scripts/release-android.sh scripts/release-ios.sh
+
   ios:
     name: iOS unit tests
     runs-on: macos-latest

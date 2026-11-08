@@ -17,6 +17,12 @@ iOS/build/
 keystore.properties
 *.keystore
 *.jks
+*.p12
+*.p8
+*.mobileprovision
+*.cer
+*.ipa
+*.xcarchive
 
 # macOS
 .DS_Store

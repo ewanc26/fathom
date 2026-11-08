@@ -16,6 +16,9 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: false
 
+# Release signing is supplied on the xcodebuild command line by
+# scripts/release-ios.sh (team, manual style and provisioning profile). The
+# project deliberately contains no team, certificate or profile.
 settings:
   base:
     SWIFT_VERSION: "5.0"
