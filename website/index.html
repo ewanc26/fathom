@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fathom — your listening, from your own repo</title>
+  <meta name="description" content="Fathom is a native, read-only teal.fm dashboard for iOS and Android. It reads the plays already in your AT Protocol repo and computes the figures on your device.">
+  <meta name="theme-color" content="#0b1416">
+  <meta property="og:title" content="Fathom — your listening, from your own repo">
+  <meta property="og:description" content="A native, read-only teal.fm dashboard for iOS and Android. No account, no password, no token.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://fathom.ewancroft.uk/icon.png">
+  <link rel="icon" href="icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Fathom home">
+      <img src="icon.png" alt="" width="40" height="40">
+      <span>Fathom</span>
+    </a>
+    <nav aria-label="Primary">
+      <a href="#about">About</a>
+      <a href="#screens">Screens</a>
+      <a href="#figures">How it works</a>
+      <a href="https://github.com/ewanc26/fathom">Source</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <p class="eyebrow">teal.fm · iOS and Android</p>
+      <h1>Your listening, from your own repo.</h1>
+      <p class="lede">
+        Fathom is a native dashboard for the plays already in your AT Protocol
+        repository. Now playing, the last seven or thirty days, all-time totals,
+        and every play grouped by the day you actually had.
+      </p>
+      <div class="actions">
+        <a class="button" href="https://github.com/ewanc26/fathom">View the source</a>
+        <a class="button secondary" href="#figures">How the figures are made</a>
+      </div>
+      <p class="note">Read-only. No account, no password, no token.</p>
+    </section>
+
+    <section id="about" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">What it is</p>
+        <h2>A dashboard that reads your PDS, not an AppView.</h2>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <h3>Your records, your data server</h3>
+          <p>
+            teal.fm keeps plays in each person's own repository. Fathom resolves
+            the handle, finds that account's PDS, and reads the public records
+            directly. There is no Fathom backend in the middle.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Four screens, one read</h3>
+          <p>
+            Now, Stats, History and Profile draw from one history read, so the
+            play count on one screen cannot disagree with another. The dashboard
+            opens on the newest page and fills in as the rest arrives.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Honest about what it read</h3>
+          <p>
+            A read that stops at the 50,000-play guard or on a failed page is
+            labelled partial. Plays with no readable timestamp are counted and
+            listed rather than quietly dropped.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="screens" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">The app</p>
+        <h2>Built around one number per tile.</h2>
+      </div>
+      <div class="screens">
+        <figure>
+          <img src="images/now.png" width="600" height="1304" loading="lazy"
+               alt="Fathom's Now screen: today's plays, time and streak, a fourteen-day chart, and recent plays.">
+          <figcaption>Now</figcaption>
+        </figure>
+        <figure>
+          <img src="images/stats.png" width="600" height="1304" loading="lazy"
+               alt="Fathom's Stats screen: totals for the selected period and top artists.">
+          <figcaption>Stats</figcaption>
+        </figure>
+        <figure>
+          <img src="images/history.png" width="600" height="1304" loading="lazy"
+               alt="Fathom's History screen: plays grouped by the day the listener had.">
+          <figcaption>History</figcaption>
+        </figure>
+        <figure>
+          <img src="images/profile.png" width="600" height="1304" loading="lazy"
+               alt="Fathom's Profile screen: account details and how the figures are made.">
+          <figcaption>Profile</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="figures" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">The arithmetic</p>
+        <h2>The figures are local, and say so.</h2>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <h3>Read a hundred at a time</h3>
+          <p>
+            <code>com.atproto.repo.listRecords</code> returns the newest plays
+            first. Fathom pages until the repository runs out, so “All time” is a
+            total rather than the newest slice.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Compute on the device</h3>
+          <p>
+            Plays, artists, releases and tracks are aggregated by a shared
+            Kotlin core on both platforms. teal.fm's network-wide stats are a
+            different measurement, and Fathom never presents one as the other.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Label a partial read</h3>
+          <p>
+            Transient rate limits and server failures are retried with bounded
+            backoff. A rejected page keeps what was read and carries the partial
+            label; a 404 still means the namespace is empty.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="status" class="section status">
+      <div>
+        <p class="eyebrow">Release status</p>
+        <h2>Not yet in a store.</h2>
+        <p>
+          Fathom is read-only and still new. Signed Android and iOS artifacts
+          are the next release step; until then, the source repository is the
+          only install route. The apps have been run against a real account on
+          an Android emulator and an iOS simulator, not on a physical device.
+        </p>
+      </div>
+      <div class="status-links">
+        <a class="button" href="https://github.com/ewanc26/fathom">Build from source</a>
+        <a class="button secondary" href="https://github.com/ewanc26/fathom/issues">Open issues</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div>
+      <p>Fathom is free software under the GNU Affero General Public License v3.0.</p>
+      <p class="fine">Not affiliated with teal.fm or Bluesky. Your PDS is operated by whoever hosts it.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="privacy/">Privacy</a>
+      <a href="terms/">Terms</a>
+      <a href="https://github.com/ewanc26/fathom">Source</a>
+      <a href="https://github.com/ewanc26/fathom/blob/main/LICENSE">Licence</a>
+    </nav>
+  </footer>
+</body>
+</html>
