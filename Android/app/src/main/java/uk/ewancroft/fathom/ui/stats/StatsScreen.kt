@@ -20,8 +20,10 @@ import uk.ewancroft.fathom.data.Dashboard
 import uk.ewancroft.fathom.shared.auth.Provenance
 import uk.ewancroft.fathom.shared.format.CountText
 import uk.ewancroft.fathom.shared.format.DurationText
+import uk.ewancroft.fathom.shared.format.RelativeTime
 import uk.ewancroft.fathom.shared.format.ServiceNames
 import uk.ewancroft.fathom.shared.stats.Period
+import uk.ewancroft.fathom.shared.time.CivilDays
 import uk.ewancroft.fathom.ui.components.EmptyState
 import uk.ewancroft.fathom.ui.components.Notice
 import uk.ewancroft.fathom.ui.components.Panel
@@ -40,9 +42,12 @@ fun StatsScreen(
     dashboard: Dashboard,
     period: Period,
     reading: Boolean,
+    nowEpochSeconds: Long,
+    tzOffsetMinutes: Int,
     onSelectPeriod: (Period) -> Unit,
 ) {
     val stats = dashboard.stats
+    val today = CivilDays.epochDay(nowEpochSeconds, tzOffsetMinutes)
 
     Column(
         modifier = Modifier
@@ -101,7 +106,7 @@ fun StatsScreen(
                     StatTile(
                         value = busiest.playCount.toString(),
                         label = "on the busiest day",
-                        detail = busiest.dayKey,
+                        detail = RelativeTime.friendlyDay(busiest.epochDay, today),
                         modifier = Modifier.weight(1f),
                     )
                     StatTile(
@@ -166,6 +171,31 @@ fun StatsScreen(
             }
         }
 
+        Panel {
+            Column {
+                Text(
+                    text = "Top tracks",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(6.dp))
+                if (stats.topTracks.isEmpty()) {
+                    EmptyState("No tracks", "Nothing was played in this period.")
+                } else {
+                    val leader = stats.topTracks.first().playCount.coerceAtLeast(1)
+                    stats.topTracks.forEachIndexed { index, track ->
+                        RankRow(
+                            rank = index + 1,
+                            title = track.name,
+                            subtitle = track.artist,
+                            playCount = track.playCount,
+                            fraction = track.playCount.toFloat() / leader,
+                        )
+                    }
+                }
+            }
+        }
+
         provenance(dashboard, reading)
     }
 }
@@ -185,6 +215,16 @@ private fun provenance(dashboard: Dashboard, reading: Boolean) {
         }
         if (dashboard.skippedRecords > 0) {
             add("${dashboard.skippedRecords} unreadable ${if (dashboard.skippedRecords == 1) "record was" else "records were"} skipped")
+        }
+        if (dashboard.stats.undatedPlays > 0) {
+            val undated = dashboard.stats.undatedPlays
+            add(
+                if (undated == 1) {
+                    "1 play has no readable timestamp; it cannot be dated or drawn"
+                } else {
+                    "$undated plays have no readable timestamp; they cannot be dated or drawn"
+                },
+            )
         }
         if (dashboard.usedLegacyNamespace) {
             add("Includes records from the older ${Provenance.LEGACY_NAMESPACE} namespace")

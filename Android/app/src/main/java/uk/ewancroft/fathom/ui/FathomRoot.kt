@@ -158,6 +158,8 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
                             dashboard = dashboard,
                             period = state.period,
                             reading = state.loading,
+                            nowEpochSeconds = now,
+                            tzOffsetMinutes = tz,
                             onSelectPeriod = viewModel::selectPeriod,
                         )
 

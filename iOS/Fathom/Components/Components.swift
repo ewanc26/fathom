@@ -59,6 +59,7 @@ struct StatTile: View {
 struct RankRow: View {
     let rank: Int
     let title: String
+    var subtitle: String?
     let playCount: Int32
     let fraction: Double
 
@@ -69,9 +70,17 @@ struct RankRow: View {
                     .font(.caption)
                     .foregroundStyle(FathomPalette.muted)
                     .frame(width: 20, alignment: .leading)
-                Text(title)
-                    .font(.body)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.body)
+                        .lineLimit(1)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption2)
+                            .foregroundStyle(FathomPalette.muted)
+                            .lineLimit(1)
+                    }
+                }
                 Spacer(minLength: 8)
                 Text("\(playCount)")
                     .font(.caption)
