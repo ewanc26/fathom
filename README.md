@@ -61,8 +61,9 @@ research behind reading the repo at all.
 | `iOS/` | iOS client (SwiftUI), with a generated Xcode project. |
 | `lexicons/` | The `fm.teal.*` lexicons, vendored from [teal-fm/teal](https://github.com/teal-fm/teal) unmodified. |
 | `website/` | The public landing page, privacy policy, terms, client metadata and icon, served by GitHub Pages. |
-| `docs/` | Protocol research, architecture, the dashboard's design, and the release checklist. |
-| `.github/workflows/` | CI, the Pages deployment and the tag-driven release workflow. |
+| `tools/release/` | Local signed publisher, release manifest and SBOM helpers. |
+| `docs/` | Protocol research, architecture and the dashboard's design. |
+| `.github/workflows/` | CI, the Pages deployment and the release provenance workflow. |
 
 ## Features
 
@@ -217,19 +218,29 @@ Android reads that file directly; iOS is synchronised into `project.yml` and
 `Info.plist` by `python3 scripts/sync-version.py`, and CI rejects drift. Every
 uploaded build must raise `versionCode`, which is also the iOS build number.
 
-The [Release](.github/workflows/release.yml) workflow is tag-driven. A push of
-`v0.2.0` checks that the tag matches `version.properties`, builds a signed AAB,
-APK and App Store Connect IPA from secrets in the protected `release`
-environment, and publishes them plus checksums on a GitHub Release. A manual
-dispatch builds the same artifacts without publishing. The environment now
-exists with a required reviewer, but its signing secrets are not configured, so
-no signed store build has been published; #24 tracks the first one. A debug
-Android development preview is attached to
+Releases follow the same split as Inkwell: the APK and IPA are built and signed
+on the publisher's machine, then attached to one unified `v<version>` GitHub
+Release. GitHub Actions never receives a signing key. The
+[Release provenance](.github/workflows/release.yml) workflow only adds SPDX
+SBOMs, a hashed release manifest and build-provenance attestations for the
+manifest and SBOMs. The AAB is a Play upload artefact, not a release asset.
+
+The local publisher is dry-run by default:
+
+```bash
+node tools/release/publish.mjs status
+node tools/release/publish.mjs android --yes --notes-file release-notes.md
+node tools/release/publish.mjs ios --ipa path/to/Fathom-0.2.0-9.ipa --yes
+```
+
+No signed `v0.2.0` release exists yet because this machine has no Apple
+Distribution certificate/profile or Android upload key; #24 tracks the first
+one. A debug Android development preview is attached to
 [preview-0.2.0](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0);
-it is installable beside a future release because its application ID ends in
-`.debug`, and it is not store-ready. See [`docs/RELEASE.md`](docs/RELEASE.md)
-for signing secrets, local commands, the internal-testing checklist and
-rollback.
+it predates the release contract, is installable beside a future release
+because its application ID ends in `.debug`, and is not store-ready. See
+[`RELEASE_PROCESS.md`](RELEASE_PROCESS.md) for local signing, provenance
+verification, the internal-testing checklist and rollback.
 
 The public site lives in [`website/`](website/).
 [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to
@@ -250,10 +261,11 @@ no build step, no JavaScript, no analytics and no third-party requests.
 - **Incremental refresh trusts the saved tail.** A record edited or deleted
   below that tail is only picked up by **Read everything**; ordinary refresh is
   for new plays, not a rewritten repo.
-- **No signed store build.** The tag workflow produces signed artifacts once
-  the release environment has its signing secrets, but Play internal testing
-  and TestFlight are still manual and no store build has been uploaded. The
-  Android debug preview is a development build, not a substitute for one.
+- **No signed store build.** Release binaries must be built and signed
+  locally, and this machine does not have the Apple certificate/profile or
+  Android upload key yet, so no signed `v0.2.0` release exists. Play internal
+  testing and TestFlight are still manual. The Android debug preview is a
+  development build, not a substitute for one.
 - **Figures are local.** They are computed from this repo, not from teal.fm's
   network-wide stats endpoints, and the two are not the same measurement.
 - **No OAuth.** None is needed to read, and a half-implemented flow would be

@@ -4,6 +4,22 @@ All notable changes to Fathom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 semantic versioning.
 
+## [Unreleased]
+
+### Changed
+
+- Releases now follow Inkwell's split: `tools/release/publish.mjs` builds and
+  signs the Android APK locally, accepts an exported iOS IPA, and creates one
+  unified `v<version>` GitHub Release. CI only adds SPDX SBOMs, a release
+  manifest and build-provenance attestations, so signing keys never enter
+  Actions.
+- GitHub release assets are now `Fathom-<version>.apk` and
+  `Fathom-<version>.ipa`; the Play `.aab` stays a local store upload rather
+  than a release asset. The attested release manifest is the published
+  checksum record, replacing the per-platform `SHA256SUMS` upload.
+- `RELEASE_PROCESS.md` replaces `docs/RELEASE.md` and documents local signing,
+  provenance verification, store handoff and rollback.
+
 ## [0.2.0] - 2026-11-08
 
 0.2.0 is the first tagged release. It adds the About surface, History search
@@ -91,7 +107,7 @@ signed store build has been published yet.
   `scripts/release-android.sh` and `scripts/release-ios.sh` do the same and
   verify the signatures or embedded version before handing over artifacts.
 - A release checklist covering secrets, internal testing, smoke tests and
-  rollback is documented in `docs/RELEASE.md`. Store uploads remain manual.
+  rollback is documented in `RELEASE_PROCESS.md`. Store uploads remain manual.
 
 ### Fixed
 
