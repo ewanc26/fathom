@@ -3,7 +3,6 @@ import FathomShared
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -19,6 +18,7 @@ struct RootView: View {
 
 struct DashboardView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TabView {
@@ -56,7 +56,7 @@ struct DashboardView: View {
         // count looks the same at four hundred plays as at twenty thousand,
         // and the difference is six seconds versus two minutes.
         .safeAreaInset(edge: .top, spacing: 0) {
-            if model.loading, let plays = model.snapshot?.plays.count,
+            if model.readingHistory, let plays = model.snapshot?.plays.count,
                !model.readingStatusDismissed {
                 ReadingBar(playsRead: plays) { model.dismissReadingStatus() }
             }

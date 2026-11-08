@@ -56,7 +56,7 @@ jobs:
 
       - name: Run shared tests and build Android
         working-directory: Android
-        run: ./gradlew :shared:jvmTest :app:assembleDebug --stacktrace --no-daemon
+        run: ./gradlew :shared:jvmTest :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
 
   icons:
     name: Generated assets and version

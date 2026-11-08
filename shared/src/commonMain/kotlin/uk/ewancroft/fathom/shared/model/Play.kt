@@ -39,6 +39,16 @@ data class ArtistRef(
 @Serializable
 data class Play(
     @SerialName("\$type") val type: String? = null,
+    /**
+     * The AT URI of the record envelope, not a lexicon field.
+     *
+     * It is the record's stable identity: two pages can overlap, and a cache
+     * can be restored with the same play twice, but the URI is what makes it
+     * one record. Null for a value decoded without an envelope.
+     */
+    val uri: String? = null,
+    /** The CID of the record envelope; not a lexicon field. */
+    val cid: String? = null,
     val trackName: String = "",
     val trackMbId: String? = null,
     val recordingMbId: String? = null,

@@ -2,7 +2,9 @@ package uk.ewancroft.fathom.shared
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import uk.ewancroft.fathom.shared.model.Play
 import uk.ewancroft.fathom.shared.xrpc.listRecordsQuery
 
 /**
@@ -31,6 +33,13 @@ class FathomCoreTest {
         assertTrue(query.contains("limit=100"), "the page size should survive: $query")
     }
 
+    @Test
+    fun exposesThePathsAndCeilingsBothClientsUse() {
+        assertEquals("/xrpc/com.atproto.repo.listRecords", FathomCore.listRecordsPath())
+        assertEquals("/xrpc/com.atproto.repo.getRecord", FathomCore.getRecordPath())
+        assertEquals(100, FathomCore.maxPage())
+        assertEquals(50_000, FathomCore.playCeiling())
+    }
 
     @Test
     fun exposesTheRetryPolicyToBothClients() {
@@ -38,12 +47,21 @@ class FathomCoreTest {
         assertTrue(FathomCore.isRetryableStatus(429))
         assertEquals(5_000L, FathomCore.retryDelayMillis(0, "5", 0L))
     }
+
     @Test
-    fun exposesThePathsAndCeilingsBothClientsUse() {
-        assertEquals("/xrpc/com.atproto.repo.listRecords", FathomCore.listRecordsPath())
-        assertEquals("/xrpc/com.atproto.repo.getRecord", FathomCore.getRecordPath())
-        assertEquals(100, FathomCore.maxPage())
-        assertEquals(50_000, FathomCore.playCeiling())
+    fun deduplicatesPlaysByTheirRecordUri() {
+        val first = Play(trackName = "One", uri = "at://x/a")
+        val second = Play(trackName = "One again", uri = "at://x/a")
+
+        assertEquals(1, FathomCore.distinctPlays(listOf(first, second)).size)
+    }
+
+    @Test
+    fun exposesTheResumeRuleToTheSwiftFacade() {
+        val plays = listOf(Play(uri = "at://x/a"))
+
+        assertTrue(FathomCore.canResume(plays, complete = true))
+        assertFalse(FathomCore.canResume(plays, complete = false))
     }
 
     @Test

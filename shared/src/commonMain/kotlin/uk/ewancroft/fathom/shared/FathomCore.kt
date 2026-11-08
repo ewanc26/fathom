@@ -9,6 +9,7 @@ import uk.ewancroft.fathom.shared.format.RelativeTime
 import uk.ewancroft.fathom.shared.format.ServiceNames
 import uk.ewancroft.fathom.shared.model.ActorSearchPage
 import uk.ewancroft.fathom.shared.model.Play
+import uk.ewancroft.fathom.shared.model.PlayRecords
 import uk.ewancroft.fathom.shared.model.TealProfile
 import uk.ewancroft.fathom.shared.model.TealStatus
 import uk.ewancroft.fathom.shared.stats.ListeningStats
@@ -102,6 +103,7 @@ object FathomCore {
         savedAtEpochSeconds: Long,
     ): String = HistoryCache.encode(
         CachedHistory(
+            version = HistoryCache.VERSION,
             identity = identity,
             did = did,
             handle = handle,
@@ -186,6 +188,13 @@ object FathomCore {
 
     /** The ceiling on plays one load reads, so the native paging loops agree. */
     fun playCeiling(): Int = MAX_PLAYS
+
+    /** Collapses overlapping pages/cache entries by AT URI. */
+    fun distinctPlays(plays: List<Play>): List<Play> = PlayRecords.distinct(plays)
+
+    /** True when a complete, identified read can seed an incremental refresh. */
+    fun canResume(plays: List<Play>, complete: Boolean): Boolean =
+        PlayRecords.canResume(plays, complete)
 
     // Both transports ask this policy rather than inventing their own waits.
     fun retryMaxAttempts(): Int = RetryPolicy.MAX_ATTEMPTS

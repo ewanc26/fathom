@@ -24,6 +24,14 @@ import uk.ewancroft.fathom.ui.components.PlayRow
 /** One day's plays, already ordered newest first. */
 private data class DaySection(val epochDay: Long, val plays: List<Play>)
 
+/** What History says about records it cannot place under a day. */
+private fun undatedNotice(count: Int): String =
+    if (count == 1) {
+        "1 play has no readable timestamp and is not shown."
+    } else {
+        "$count plays have no readable timestamp and are not shown."
+    }
+
 /**
  * Every play Fathom read, grouped by the day the listener had.
  *
@@ -47,12 +55,23 @@ fun HistoryScreen(
             .map { (day, entries) -> DaySection(day, entries.map { it.first }) }
     }
 
+    val undated = dashboard.stats.undatedPlays
+
     if (sections.isEmpty()) {
         if (reading) {
             EmptyState(
                 title = "Reading history",
                 body = "The plays are still arriving from this account's data server.",
             )
+        } else if (dashboard.sampled) {
+            EmptyState(
+                title = "No plays read",
+                body = dashboard.readFailure?.let {
+                    "The history stopped before any plays could be read. $it"
+                } ?: "Only part of the history was read, and no dated plays arrived.",
+            )
+        } else if (undated > 0) {
+            EmptyState(title = "No dated plays", body = undatedNotice(undated))
         } else {
             EmptyState(
                 title = "No history",
@@ -84,13 +103,25 @@ fun HistoryScreen(
             }
         }
 
+        if (undated > 0) {
+            item(key = "undated") {
+                Text(
+                    text = undatedNotice(undated),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+            }
+        }
+
         if (dashboard.sampled) {
             item(key = "sampled") {
                 Text(
                     text = if (reading) {
                         "Still reading the rest of the history."
                     } else {
-                        "Only part of the history was read."
+                        dashboard.readFailure?.let { "Only part of the history was read. $it" }
+                            ?: "Only part of the history was read."
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

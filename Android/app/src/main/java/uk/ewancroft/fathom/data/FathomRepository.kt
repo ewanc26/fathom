@@ -5,7 +5,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uk.ewancroft.fathom.shared.TealJson
 import uk.ewancroft.fathom.shared.cache.CachedHistory
+import uk.ewancroft.fathom.shared.cache.HistoryCache
 import uk.ewancroft.fathom.shared.model.Play
+import uk.ewancroft.fathom.shared.model.PlayMerger
+import uk.ewancroft.fathom.shared.model.PlayRecords
+import uk.ewancroft.fathom.shared.model.ReadCheckpoint
 import uk.ewancroft.fathom.shared.model.TealProfile
 import uk.ewancroft.fathom.shared.model.TealStatus
 import uk.ewancroft.fathom.shared.stats.ListeningStats
@@ -35,6 +39,8 @@ data class Dashboard(
     val sampled: Boolean,
     val skippedRecords: Int,
     val usedLegacyNamespace: Boolean,
+    /** Why a partial read stopped, when it failed rather than hit the guard. */
+    val readFailure: String? = null,
     /** The PDS this read came from; null for a copy restored from disk. */
     val pds: String? = null,
 )
@@ -55,22 +61,33 @@ data class StatusRefresh(
  * stats route — while every play is in the person's own repo and therefore
  * always readable.
  *
- * Every page is read, because a total computed from the newest thousand plays
- * is not a total. A page costs roughly half a second on a real PDS, so a long
- * history is minutes of requests: the newest page is published as soon as it
- * arrives and the rest follow, rather than leaving the app on a spinner.
+ * A first read fetches every page, because a total computed from the newest
+ * thousand plays is not a total. A page costs roughly half a second on a real
+ * PDS, so a long history is minutes of requests: the newest page is published
+ * as soon as it arrives and the rest follow, rather than leaving the app on a
+ * spinner. A later refresh stops at the first wholly known page instead.
  */
-class FathomRepository(private val client: TealClient = TealClient()) {
+class FathomRepository(private val client: TealReadClient = TealClient()) {
 
     /**
      * Reads [identity]'s history, calling [onProgress] with a dashboard after
      * the profile and status arrive and then every [PROGRESS_EVERY_PAGES]
-     * pages. Every dashboard passed to [onProgress] is marked sampled; the
-     * returned one is sampled only if the read ended early.
+     * pages. A resumed read publishes after its first page with new records,
+     * since that read may stop on the next page. Every dashboard passed to
+     * [onProgress] is marked sampled; the returned one is sampled only if the
+     * read ended early.
+     *
+     * A complete [checkpoint] from the saved copy is a stopping point: the
+     * read pages newest-first until a whole page is already known, then stops
+     * and lets [PlayMerger] keep the newer records. [forceFull] ignores the
+     * checkpoint for the explicit "read everything" action, which is how an
+     * edited or deleted record is noticed.
      */
     suspend fun load(
         identity: String,
         period: Period,
+        checkpoint: ReadCheckpoint? = null,
+        forceFull: Boolean = false,
         nowEpochSeconds: Long = System.currentTimeMillis() / 1_000L,
         tzOffsetMinutes: Int = currentOffsetMinutes(nowEpochSeconds),
         onProgress: ((Dashboard) -> Unit)? = null,
@@ -82,11 +99,15 @@ class FathomRepository(private val client: TealClient = TealClient()) {
         val profile = loadProfile(pds, did)
         val status = loadStatus(pds, did)
 
-        var skipped = 0
-        var legacy = false
+        val resume = checkpoint?.takeIf {
+            !forceFull && it.did == did && PlayRecords.canResume(it.plays, it.complete)
+        }
+        val merger = PlayMerger(resume?.plays ?: emptyList())
+        var skipped = resume?.skipped ?: 0
+        var legacy = resume?.legacy ?: false
         var complete = true
+        var readFailure: String? = null
         var pages = 0
-        val plays = ArrayList<Play>()
 
         fun publish(sampled: Boolean) {
             onProgress?.invoke(
@@ -95,63 +116,92 @@ class FathomRepository(private val client: TealClient = TealClient()) {
                     handle = handle,
                     profile = profile,
                     status = status,
-                    plays = plays,
+                    plays = merger.plays,
                     period = period,
                     nowEpochSeconds = nowEpochSeconds,
                     tzOffsetMinutes = tzOffsetMinutes,
                     sampled = sampled,
                     skipped = skipped,
                     legacy = legacy,
+                    readFailure = readFailure,
+                    pds = pds,
                 ),
             )
         }
 
         // The account and what it is playing are known before any play is
-        // read, so they go on screen first.
-        publish(sampled = true)
+        // read, so they go on screen first. A resumed read already has a full
+        // saved picture; publishing its seed would flash the reading banner
+        // for a refresh that may finish on the first page.
+        if (resume == null) publish(sampled = true)
 
         for (collection in TealCollections.PLAYS) {
             var cursor: String? = null
             while (true) {
-                if (plays.size >= MAX_PLAYS) {
+                // A resumed cache may already sit at the guard. It is bounded,
+                // and the first wholly-known page is the stop; a full read is
+                // still stopped at exactly the same ceiling as before.
+                if (resume == null && merger.size >= MAX_PLAYS) {
                     complete = false
                     break
                 }
 
-                // A collection that 400s is not a reason to lose the other
-                // namespace: the migration means an account can hold one and
-                // not the other, and an unknown collection is answered
-                // inconsistently across PDS implementations. Absence is an
-                // answer, so it leaves the read complete; a network failure
-                // does not, because the rest of the history is still unread.
+                // A 404 is absence: the migration means an account can hold
+                // one namespace and not the other, and an unknown collection
+                // is answered inconsistently across PDS implementations.
+                // A 400 is not absence: it is a rejected request (a bad cursor,
+                // for example), so the rest of this namespace is unread and the
+                // dashboard must say so.
                 val response = runCatching {
                     client.listRecords(pds, did, collection, cursor, MAX_PAGE)
                 }
                 response.exceptionOrNull()?.let { failure ->
                     if (failure is CancellationException) throw failure
-                    if (failure !is FathomNotFoundException) complete = false
+                    if (failure !is FathomNotFoundException) {
+                        complete = false
+                        if (readFailure == null) {
+                            readFailure = (failure as? FathomException)?.message
+                                ?: "The read stopped early."
+                        }
+                    }
                 }
                 val body = response.getOrNull() ?: break
 
                 val page = TealJson.decodePlays(body)
                 if (!page.parsed) {
                     complete = false
+                    if (readFailure == null) readFailure = "A page of plays could not be read."
                     break
                 }
                 if (collection == TealCollections.ALPHA_PLAY && page.records.isNotEmpty()) {
                     legacy = true
                 }
                 skipped += page.skipped
-                page.values().forEach { plays += it }
+                val merge = merger.addPage(page.values())
+                // A malformed sibling is not a known record. The page cannot
+                // prove where the saved tail starts, so keep reading.
+                val pageIsKnown = merge.pageWasFullyKnown && page.skipped == 0
 
                 pages++
-                if (pages % PROGRESS_EVERY_PAGES == 0) publish(sampled = true)
+                if (resume != null) {
+                    if (!pageIsKnown &&
+                        (pages == 1 || pages % PROGRESS_EVERY_PAGES == 0)
+                    ) {
+                        publish(sampled = true)
+                    }
+                } else if (pages % PROGRESS_EVERY_PAGES == 0) {
+                    publish(sampled = true)
+                }
+                if (resume != null && pageIsKnown) break
 
                 val next = page.cursor ?: break
                 // A server that repeats a cursor would otherwise page until
                 // the guard stopped it.
                 if (next == cursor) {
                     complete = false
+                    if (readFailure == null) {
+                        readFailure = "The data server did not advance the page cursor."
+                    }
                     break
                 }
                 cursor = next
@@ -163,13 +213,33 @@ class FathomRepository(private val client: TealClient = TealClient()) {
             handle = handle,
             profile = profile,
             status = status,
-            plays = plays,
+            plays = merger.plays,
             period = period,
             nowEpochSeconds = nowEpochSeconds,
             tzOffsetMinutes = tzOffsetMinutes,
             sampled = !complete,
             skipped = skipped,
             legacy = legacy,
+            readFailure = readFailure,
+            pds = pds,
+        )
+    }
+
+    /**
+     * Re-reads just the status record for [dashboard].
+     *
+     * The status is the one thing on the dashboard that changes without the
+     * repo changing, and it expires in ten minutes. One `getRecord` a minute
+     * keeps it honest; plays and figures are untouched. Unlike the initial
+     * load, a network failure is thrown rather than turned into "no status":
+     * clearing a live card because one poll failed would be a worse lie than
+     * one stale minute.
+     */
+    suspend fun refreshStatus(dashboard: Dashboard): StatusRefresh {
+        val pds = dashboard.pds ?: client.pdsFor(dashboard.did)
+        return StatusRefresh(
+            pds = pds,
+            status = loadStatus(pds, dashboard.did, allowFailure = false),
         )
     }
 
@@ -198,6 +268,7 @@ class FathomRepository(private val client: TealClient = TealClient()) {
     /** The cache entry for a completed read of [identity]. */
     fun toCache(identity: String, dashboard: Dashboard, savedAtEpochSeconds: Long): CachedHistory =
         CachedHistory(
+            version = HistoryCache.VERSION,
             identity = identity,
             did = dashboard.did,
             handle = dashboard.handle,
@@ -227,7 +298,7 @@ class FathomRepository(private val client: TealClient = TealClient()) {
         handle = cached.handle,
         profile = cached.profile,
         status = cached.status,
-        plays = cached.plays,
+        plays = deduplicatedCache(cached),
         period = period,
         nowEpochSeconds = nowEpochSeconds,
         tzOffsetMinutes = tzOffsetMinutes,
@@ -235,6 +306,16 @@ class FathomRepository(private val client: TealClient = TealClient()) {
         skipped = cached.skipped,
         legacy = cached.legacy,
     )
+
+    /**
+     * A saved history deduplicated before it reaches the screens.
+     *
+     * The cache is written from a deduplicated read, but an older file or a
+     * hand-edited one can still contain the same record twice. Deduplicating
+     * here means the figures and History cannot disagree about it.
+     */
+    private fun deduplicatedCache(cached: CachedHistory): List<Play> =
+        PlayRecords.distinct(cached.plays)
 
     /** Orders plays newest first and computes the figures for [period]. */
     private fun snapshot(
@@ -249,6 +330,8 @@ class FathomRepository(private val client: TealClient = TealClient()) {
         sampled: Boolean,
         skipped: Int,
         legacy: Boolean,
+        readFailure: String? = null,
+        pds: String? = null,
     ): Dashboard {
         val ordered = plays.sortedWith(
             compareByDescending<Play> { IsoInstant.parse(it.playedTime) ?: Long.MIN_VALUE }
@@ -270,24 +353,8 @@ class FathomRepository(private val client: TealClient = TealClient()) {
             sampled = sampled,
             skippedRecords = skipped,
             usedLegacyNamespace = legacy,
-        )
-    }
-
-    /**
-     * Re-reads just the status record for [dashboard].
-     *
-     * The status is the one thing on the dashboard that changes without the
-     * repo changing, and it expires in ten minutes. One `getRecord` a minute
-     * keeps it honest; plays and figures are untouched. Unlike the initial
-     * load, a network failure is thrown rather than turned into "no status":
-     * clearing a live card because one poll failed would be a worse lie than
-     * one stale minute.
-     */
-    suspend fun refreshStatus(dashboard: Dashboard): StatusRefresh {
-        val pds = dashboard.pds ?: client.pdsFor(dashboard.did)
-        return StatusRefresh(
+            readFailure = readFailure,
             pds = pds,
-            status = loadStatus(pds, dashboard.did, allowFailure = false),
         )
     }
 

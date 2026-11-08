@@ -16,13 +16,25 @@ struct ProfileView: View {
                     identityPanel(snapshot)
                     accountPanel(snapshot)
                     methodPanel
+                    Button("Read everything") {
+                        Task { await model.refresh(forceFull: true) }
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+                    .disabled(model.loading)
+
+                    Text("Refresh reads only new plays. Read everything re-reads the whole history to pick up edited or deleted records.")
+                        .font(.caption2)
+                        .foregroundStyle(FathomPalette.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
                     Button("Disconnect", role: .destructive) {
                         model.disconnect()
                     }
                     .buttonStyle(.bordered)
                     .frame(maxWidth: .infinity)
 
-                    Text("Fathom keeps one copy of your public history on this device so the next launch opens instantly. Disconnecting deletes it along with the handle.")
+                    Text("Fathom keeps one copy of your public history on this device so the next launch opens instantly. It is excluded from device backups. Disconnecting deletes it along with the handle.")
                         .font(.caption2)
                         .foregroundStyle(FathomPalette.muted)
                         .frame(maxWidth: .infinity, alignment: .leading)

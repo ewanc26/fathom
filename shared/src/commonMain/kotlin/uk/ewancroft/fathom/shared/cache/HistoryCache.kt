@@ -23,11 +23,12 @@ import uk.ewancroft.fathom.shared.model.TealStatus
  * the runaway guard or on a failed page is still worth saving, and drawing it
  * from disk must keep the "only part of this was read" label it earned.
  * [version] exists so an incompatible file can be discarded rather than
- * misread; a cache is always safe to delete.
+ * misread. It has no default, so a file written before the field existed is
+ * discarded too; a cache is always safe to delete.
  */
 @Serializable
 data class CachedHistory(
-    val version: Int = HistoryCache.VERSION,
+    val version: Int,
     val identity: String,
     val did: String,
     val handle: String? = null,
@@ -49,7 +50,12 @@ data class CachedHistory(
  * keeps this module free of platform types like every other part of the core.
  */
 object HistoryCache {
-    const val VERSION = 1
+    /**
+     * Version 3 is the first cache whose completeness flag can be trusted as
+     * an incremental stopping point. It also stores each play's AT URI and
+     * CID. Older files are discarded, so upgrading starts with a full read.
+     */
+    const val VERSION = 3
 
     /**
      * Lenient about unknown keys so a newer app can still read an older file,

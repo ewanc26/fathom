@@ -26,6 +26,8 @@ class TealJsonTest {
         assertEquals("aneurysm", first.title())
         assertEquals("SXCREDMANE & ZMAJOR", first.artistLine())
         assertEquals(110, first.duration)
+        assertEquals("at://did:plc:x/fm.teal.feed.play/3mzqeselnybem", first.uri)
+        assertEquals("bafyreibz", first.cid)
         assertEquals("aneurysm - Single", first.releaseLine())
         assertEquals("music.apple.com", first.serviceHost())
     }

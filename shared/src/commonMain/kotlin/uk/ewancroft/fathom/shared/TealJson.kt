@@ -39,8 +39,27 @@ object TealJson {
         explicitNulls = false
     }
 
-    /** A page of `com.atproto.repo.listRecords` output holding play records. */
-    fun decodePlays(json: String): RecordPage<Play> = decodeRecords(json)
+    /**
+     * A page of play records, with each record's envelope URI and CID copied
+     * onto the play.
+     *
+     * The values alone cannot be deduplicated: a repeat of one track is
+     * legitimate, while two overlapping pages can contain the same record. The
+     * envelope URI is the only stable identity.
+     */
+    fun decodePlays(json: String): RecordPage<Play> {
+        val page = decodeRecords<Play>(json)
+        return page.copy(
+            records = page.records.map { entry ->
+                entry.copy(
+                    value = entry.value.copy(
+                        uri = entry.uri.takeIf { it.isNotBlank() },
+                        cid = entry.cid,
+                    ),
+                )
+            },
+        )
+    }
 
     /** A page holding teal profile records. */
     fun decodeProfiles(json: String): RecordPage<TealProfile> = decodeRecords(json)

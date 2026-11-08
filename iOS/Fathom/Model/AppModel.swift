@@ -15,7 +15,10 @@ struct DashboardSnapshot {
     let sampled: Bool
     let skipped: Int
     let usedLegacyNamespace: Bool
+    /// Why a partial read stopped, when it failed rather than hit the guard.
+    let readFailure: String?
     /// The PDS this read came from, so a status poll need not ask PLC again.
+    /// Nil for a snapshot restored from the saved copy.
     var pds: String? = nil
 }
 
@@ -30,6 +33,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var periodId: String
     @Published private(set) var snapshot: DashboardSnapshot?
     @Published private(set) var loading = false
+    /// True only once a read has actually published progress worth showing.
+    @Published private(set) var readingHistory = false
     /// Dismissal is per read: hiding the banner does not cancel the read, and
     /// the next read starts with the banner visible again.
     @Published private(set) var readingStatusDismissed = false
@@ -85,6 +90,7 @@ final class AppModel: ObservableObject {
         }
 
         connecting = true
+        readingHistory = false
         readingStatusDismissed = false
         error = nil
         defer { connecting = false }
@@ -96,6 +102,7 @@ final class AppModel: ObservableObject {
             let loaded = try await loader.load(
                 identity: trimmed,
                 periodId: periodId,
+                checkpoint: nil,
                 onProgress: { [weak self] partial in
                     guard let self, self.loadToken == token else { return }
                     // The account is real as soon as its first page decodes,
@@ -108,6 +115,7 @@ final class AppModel: ObservableObject {
                     }
                     self.snapshot = partial
                     self.loading = true
+                    self.readingHistory = true
                 }
             )
             guard loadToken == token else { return }
@@ -115,6 +123,7 @@ final class AppModel: ObservableObject {
             identity = trimmed
             snapshot = loaded
             loading = false
+            readingHistory = false
             save(loaded, identity: trimmed)
         } catch is CancellationError {
             // A newer load replaced this one; there is no error to report.
@@ -122,13 +131,16 @@ final class AppModel: ObservableObject {
         } catch {
             guard loadToken == token else { return }
             loading = false
+            readingHistory = false
             self.error = (error as? FathomError)?.message ?? error.localizedDescription
         }
     }
 
-    func refresh() async {
+    func refresh(forceFull: Bool = false) async {
         guard let identity, !loading else { return }
+        let checkpoint = forceFull ? nil : snapshot.map { readCheckpoint(from: $0) }
         loading = true
+        readingHistory = false
         readingStatusDismissed = false
         error = nil
 
@@ -139,6 +151,8 @@ final class AppModel: ObservableObject {
             let loaded = try await loader.load(
                 identity: identity,
                 periodId: periodId,
+                checkpoint: checkpoint,
+                forceFull: forceFull,
                 onProgress: { [weak self] partial in
                     // Keep the screens on the newest complete picture while
                     // the rest of the history arrives. The loader's first
@@ -147,20 +161,25 @@ final class AppModel: ObservableObject {
                     // snapshot the moment the refresh started.
                     guard let self, self.loadToken == token else { return }
                     if let current = self.snapshot, partial.plays.count < current.plays.count {
+                        self.readingHistory = true
                         return
                     }
                     self.snapshot = partial
+                    self.readingHistory = true
                 }
             )
             guard loadToken == token else { return }
             snapshot = loaded
             loading = false
+            readingHistory = false
             save(loaded, identity: identity)
         } catch is CancellationError {
             loading = false
+            readingHistory = false
         } catch {
             guard loadToken == token else { return }
             loading = false
+            readingHistory = false
             self.error = (error as? FathomError)?.message ?? error.localizedDescription
         }
     }
@@ -229,6 +248,7 @@ final class AppModel: ObservableObject {
         stopStatusPolling()
         loadToken += 1
         loading = false
+        readingHistory = false
         store.clear()
         defaults.removeObject(forKey: Self.identityKey)
         identity = nil
@@ -245,6 +265,17 @@ final class AppModel: ObservableObject {
 
     func dismissError() {
         error = nil
+    }
+
+    /// The saved snapshot as a stopping point for the next incremental read.
+    private func readCheckpoint(from snapshot: DashboardSnapshot) -> ReadCheckpoint {
+        ReadCheckpoint(
+            did: snapshot.did,
+            plays: snapshot.plays,
+            skipped: Int32(snapshot.skipped),
+            legacy: snapshot.usedLegacyNamespace,
+            complete: !snapshot.sampled
+        )
     }
 
     /// Writes a read for the next launch, complete or not.
