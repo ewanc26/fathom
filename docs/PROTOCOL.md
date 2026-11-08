@@ -90,6 +90,17 @@ Every step is a public, unauthenticated read.
 4. **Status**: `GET {pds}/xrpc/com.atproto.repo.getRecord?repo={did}&collection=fm.teal.actor.status&rkey=self`,
    where 400/404 means "no status", not "failed".
 
+A 404 from `listRecords` means the collection is absent. A 400 does not:
+AT Protocol also uses it for invalid cursors and malformed requests, so Fathom
+keeps the pages already read, marks the read partial, and reports the failure
+rather than presenting a false total. `getRecord` is the one read where a 400
+is treated as "not written", because `literal:self` is a known key and a
+missing record is a normal state.
+
+Transient 429 and 5xx responses, timeouts and connection failures are retried
+three times with bounded backoff. `Retry-After` is honoured in delay-seconds
+and IMF-fixdate forms. A 404 is never retried: it is an answer, not a failure.
+
 `listRecords` answers `{"records":[{"uri","cid","value"}],"cursor"}` and caps
 `limit` at 100. A real page observed during development:
 
@@ -107,6 +118,11 @@ Every step is a public, unauthenticated read.
            "submissionClientAgent":"piper/v0.1.1"}}],
  "cursor":"3mzqeqt4axqg3"}
 ```
+
+Every record envelope carries `uri` and `cid`. The URI is the record's stable
+identity: Fathom stores it on the play, deduplicates overlapping pages and
+restored caches by it, and never merges two plays just because their track and
+time look alike.
 
 And a real status, which is why parsing cannot assume a track is named:
 
