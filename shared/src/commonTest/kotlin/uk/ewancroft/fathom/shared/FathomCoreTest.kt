@@ -31,6 +31,13 @@ class FathomCoreTest {
         assertTrue(query.contains("limit=100"), "the page size should survive: $query")
     }
 
+
+    @Test
+    fun exposesTheRetryPolicyToBothClients() {
+        assertEquals(4, FathomCore.retryMaxAttempts())
+        assertTrue(FathomCore.isRetryableStatus(429))
+        assertEquals(5_000L, FathomCore.retryDelayMillis(0, "5", 0L))
+    }
     @Test
     fun exposesThePathsAndCeilingsBothClientsUse() {
         assertEquals("/xrpc/com.atproto.repo.listRecords", FathomCore.listRecordsPath())

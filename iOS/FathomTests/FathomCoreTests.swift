@@ -41,6 +41,29 @@ final class FathomCoreTests: XCTestCase {
         XCTAssertEqual(FathomCore.shared.periodLabel(id: "all"), "All time")
     }
 
+    func testRetryPolicyCrossesTheBridge() {
+        let now: Int64 = 1_789_862_400
+        XCTAssertEqual(FathomCore.shared.retryMaxAttempts(), Int32(4))
+        XCTAssertTrue(FathomCore.shared.isRetryableStatus(status: 429))
+        XCTAssertFalse(FathomCore.shared.isRetryableStatus(status: 404))
+        XCTAssertEqual(
+            FathomCore.shared.retryDelayMillis(
+                attempt: 0,
+                retryAfterHeader: "5",
+                nowEpochSeconds: now
+            ),
+            Int64(5_000)
+        )
+        XCTAssertEqual(
+            FathomCore.shared.retryDelayMillis(
+                attempt: 0,
+                retryAfterHeader: "Sun, 20 Sep 2026 00:00:05 GMT",
+                nowEpochSeconds: now
+            ),
+            Int64(5_000)
+        )
+    }
+
     func testComputesStatsAcrossTheBridge() {
         let plays = FathomCore.shared.playsPage(json: Self.playPage).plays
         let stats = FathomCore.shared.computeStats(
