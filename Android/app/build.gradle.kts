@@ -29,6 +29,35 @@ val appVersionCode = versionProperties.getProperty("versionCode")
     ?.takeIf { it > 0 }
     ?: error("versionCode must be a positive integer in ${versionPropertiesFile.path}")
 
+// Release signing comes from FATHOM_KEYSTORE_* environment variables (CI) or
+// Android/keystore.properties (local), never from version control. A partial
+// configuration is an error rather than a silently unsigned release build.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.isFile) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingValue(property: String, environment: String): String? =
+    System.getenv(environment)?.takeIf { it.isNotBlank() }
+        ?: keystoreProperties.getProperty(property)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "FATHOM_KEYSTORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "FATHOM_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "FATHOM_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "FATHOM_KEY_PASSWORD")
+val releaseSigningValues = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+)
+val hasReleaseSigning = releaseSigningValues.all { it != null }
+check(hasReleaseSigning || releaseSigningValues.all { it == null }) {
+    "Release signing is partially configured. Set all FATHOM_KEYSTORE_* variables or none."
+}
+
 android {
     namespace = "uk.ewancroft.fathom"
     compileSdk = 36
@@ -41,6 +70,17 @@ android {
         versionName = appVersionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(requireNotNull(releaseStoreFile))
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -48,6 +88,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             // Side-by-side install with a release build.
