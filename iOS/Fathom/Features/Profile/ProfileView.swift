@@ -16,6 +16,27 @@ struct ProfileView: View {
                     identityPanel(snapshot)
                     accountPanel(snapshot)
                     methodPanel
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        Panel {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("About Fathom")
+                                        .font(.subheadline.weight(.semibold))
+                                    Text("Version, source and licences")
+                                        .font(.caption2)
+                                        .foregroundStyle(FathomPalette.muted)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(FathomPalette.muted)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+
                     Button("Read everything") {
                         Task { await model.refresh(forceFull: true) }
                     }

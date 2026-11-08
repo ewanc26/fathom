@@ -111,6 +111,10 @@ android {
 
     buildFeatures {
         compose = true
+        // BuildConfig.VERSION_NAME/VERSION_CODE are the one place the app
+        // reads the version it was actually built with. A literal in an
+        // About screen would be a second version that can drift.
+        buildConfig = true
     }
 }
 

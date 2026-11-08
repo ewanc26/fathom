@@ -259,4 +259,24 @@ object FathomCore {
     fun productionNamespace(): String = Provenance.PRODUCTION_NAMESPACE
 
     fun legacyNamespace(): String = Provenance.LEGACY_NAMESPACE
+
+    // ── About ────────────────────────────────────────────────────────────
+
+    fun appName(): String = AboutInfo.APP_NAME
+
+    fun appDescription(): String = AboutInfo.DESCRIPTION
+
+    fun copyright(): String = AboutInfo.COPYRIGHT
+
+    fun sourceUrl(): String = AboutInfo.SOURCE_URL
+
+    fun licenceName(): String = AboutInfo.LICENCE_NAME
+
+    fun licenceUrl(): String = AboutInfo.LICENCE_URL
+
+    fun privacyUrl(): String = AboutInfo.PRIVACY_URL
+
+    fun termsUrl(): String = AboutInfo.TERMS_URL
+
+    fun thirdPartyNotices(): String = AboutInfo.THIRD_PARTY_NOTICES
 }
