@@ -6,19 +6,30 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import uk.ewancroft.fathom.BuildConfig
 import uk.ewancroft.fathom.data.Dashboard
+import uk.ewancroft.fathom.shared.FathomCore
 import uk.ewancroft.fathom.shared.auth.Provenance
 import uk.ewancroft.fathom.ui.components.Monogram
 import uk.ewancroft.fathom.ui.components.Notice
@@ -42,6 +53,8 @@ fun ProfileScreen(
     val name = profile?.nameOrNull()
         ?: dashboard.handle
         ?: dashboard.did
+    val uriHandler = LocalUriHandler.current
+    var showAbout by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -135,6 +148,15 @@ fun ProfileScreen(
             }
         }
 
+        AboutPanel(
+            versionName = BuildConfig.VERSION_NAME,
+            versionCode = BuildConfig.VERSION_CODE,
+            onOpenSource = { uriHandler.openUri(FathomCore.sourceUrl()) },
+            onOpenPrivacy = { uriHandler.openUri(FathomCore.privacyUrl()) },
+            onOpenTerms = { uriHandler.openUri(FathomCore.termsUrl()) },
+            onOpenLicence = { showAbout = true },
+        )
+
         OutlinedButton(
             onClick = onReadEverything,
             enabled = !reading,
@@ -162,6 +184,118 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+
+    if (showAbout) {
+        AboutDialog(onDismiss = { showAbout = false })
+    }
+}
+
+@Composable
+private fun AboutPanel(
+    versionName: String,
+    versionCode: Int,
+    onOpenSource: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    onOpenTerms: () -> Unit,
+    onOpenLicence: () -> Unit,
+) {
+    Panel {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "About",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Version $versionName ($versionCode)",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = FathomCore.appDescription(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(onClick = onOpenLicence) { Text("Licence and notices") }
+            TextButton(onClick = onOpenSource) { Text("Source code") }
+            TextButton(onClick = onOpenPrivacy) { Text("Privacy policy") }
+            TextButton(onClick = onOpenTerms) { Text("Terms of use") }
+            Text(
+                text = FathomCore.copyright(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * The licence has to be readable with no network, so the AGPL text is an
+ * asset in the APK rather than a link. The third-party notices come from the
+ * shared core so both platforms carry the same list.
+ */
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val licence = remember {
+        runCatching {
+            context.assets.open("AGPL-3.0.txt").bufferedReader().use { it.readText() }
+        }.getOrElse {
+            "The licence text could not be read from this build."
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("About Fathom") },
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = FathomCore.copyright(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = FathomCore.licenceName(),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+
+                Text(
+                    text = "Third-party notices",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = FathomCore.thirdPartyNotices(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Text(
+                    text = "GNU Affero General Public License v3.0",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = licence,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
 }
 
 @Composable

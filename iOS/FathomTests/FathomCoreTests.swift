@@ -46,6 +46,13 @@ final class FathomCoreTests: XCTestCase {
         XCTAssertEqual(FathomCore.shared.monthLabel(epochDay: day), "Nov 2026")
     }
 
+    func testAboutCopyCrossesTheBridge() {
+        XCTAssertEqual(FathomCore.shared.sourceUrl(), "https://github.com/ewanc26/fathom")
+        XCTAssertEqual(FathomCore.shared.privacyUrl(), "https://fathom.ewancroft.uk/privacy")
+        XCTAssertEqual(FathomCore.shared.termsUrl(), "https://fathom.ewancroft.uk/terms")
+        XCTAssertTrue(FathomCore.shared.thirdPartyNotices().contains("Apache License 2.0"))
+    }
+
     func testIncrementalMergeCrossesTheBridge() {
         let plays = FathomCore.shared.playsPage(json: Self.playPage).plays
 
