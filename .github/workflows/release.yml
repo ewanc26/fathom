@@ -1,23 +1,68 @@
-name: Release artifacts
+name: Release
 
-# Manual only. This builds signed artifacts for internal testing; it does not
-# upload to Play or App Store Connect. Signing material comes from the
-# protected "release" environment and is never checked in. See
+# A tag push builds signed Android and iOS artifacts and publishes them on a
+# GitHub Release. A manual dispatch builds the same artifacts without
+# publishing, which is useful before a tag exists. Signing material comes from
+# the protected "release" environment and is never checked in. See
 # docs/RELEASE.md for the checklist and secret names.
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-artifacts
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
+  version-check:
+    name: Check version and tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.check.outputs.tag }}
+      version: ${{ steps.check.outputs.version }}
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Compare the tag with version.properties
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^versionName=//p' version.properties)"
+          code="$(sed -n 's/^versionCode=//p' version.properties)"
+          if [ -z "$version" ] || [ -z "$code" ]; then
+            echo "::error::version.properties must contain versionName and versionCode"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Manual run: building artifacts only; nothing will be published."
+            exit 0
+          fi
+
+          expected="v$version"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match $expected from version.properties"
+            exit 1
+          fi
+          echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
   android:
     name: Signed Android artifacts
+    needs: version-check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: release
@@ -39,7 +84,20 @@ jobs:
             shared/**/*.gradle*
 
       - name: Install Android 36 platform
-        run: sdkmanager --install "platforms;android-36"
+        # ubuntu-latest no longer puts sdkmanager on PATH; resolve it from
+        # ANDROID_HOME, the same way CI does.
+        run: |
+          set -eu
+          for candidate in \
+            "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager" \
+            /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \
+            /usr/local/lib/android/sdk/cmdline-tools/bin/sdkmanager; do
+            if [ -x "$candidate" ]; then
+              exec "$candidate" --install "platforms;android-36"
+            fi
+          done
+          echo "sdkmanager not found; ANDROID_HOME=${ANDROID_HOME:-unset}" >&2
+          exit 1
 
       - name: Check signing secrets
         env:
@@ -85,6 +143,7 @@ jobs:
 
   ios:
     name: Signed iOS IPA
+    needs: version-check
     runs-on: macos-latest
     timeout-minutes: 55
     environment: release
@@ -109,6 +168,22 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: brew install xcodegen
+
+      - name: Install Android 36 platform
+        # The shared module is an Android library (compileSdk 36); Gradle
+        # configures it even when only the iOS slices are linked.
+        run: |
+          set -eu
+          for candidate in \
+            "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager" \
+            /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \
+            /usr/local/lib/android/sdk/cmdline-tools/bin/sdkmanager; do
+            if [ -x "$candidate" ]; then
+              exec "$candidate" --install "platforms;android-36"
+            fi
+          done
+          echo "sdkmanager not found; ANDROID_HOME=${ANDROID_HOME:-unset}" >&2
+          exit 1
 
       - name: Check signing secrets
         env:
@@ -179,3 +254,46 @@ jobs:
             build/release/ios/SHA256SUMS
           retention-days: 14
           if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [version-check, android, ios]
+    if: needs.version-check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download signed artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version-check.outputs.tag }}
+          VERSION: ${{ needs.version-check.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          find artifacts -type f -name 'Fathom-*' -exec cp {} release-assets/ \;
+          find artifacts -type f -name 'SHA256SUMS' -exec sh -c \
+            'cp "$1" "release-assets/$(basename "$(dirname "$1")")-SHA256SUMS"' _ {} \;
+          mapfile -t files < <(find release-assets -type f -print | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No release artifacts were downloaded"
+            exit 1
+          fi
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Fathom $VERSION" \
+              --generate-notes \
+              --verify-tag
+          fi

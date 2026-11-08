@@ -1,17 +1,22 @@
 # Releasing Fathom
 
-This is the first release path: it is set up to produce signed Android and
-iOS artifacts from one version source. It does **not** upload to Play or App Store Connect
-yet, and no tester build has been published. The first internal build remains
-the acceptance test for #24.
+This is the first release path: it produces signed Android and iOS artifacts
+from one version source and publishes them on a GitHub Release when a tag
+matches. It does **not** upload to Play or App Store Connect yet, and no signed
+tester build has been published. The first internal build remains the
+acceptance test for #24.
+
+The protected `release` environment exists with a required reviewer. Its
+signing secrets are still unset, so a tag currently stops at the environment
+check rather than claiming a release.
 
 ## One version source
 
 [`version.properties`](../version.properties) is the source:
 
 ```properties
-versionName=0.1.0
-versionCode=8
+versionName=0.2.0
+versionCode=9
 ```
 
 - Android reads it directly in `Android/app/build.gradle.kts`.
@@ -104,23 +109,31 @@ IPA's `CFBundleShortVersionString` and `CFBundleVersion` match
 `version.properties`. Output is `build/release/ios/Fathom-<version>-<build>.ipa`
 plus `SHA256SUMS`.
 
-## Build in CI
+## Build and publish in CI
 
-Run **Actions → Release artifacts → Run workflow** from the commit to release.
-The workflow uses the `release` environment, so it waits for its reviewers.
-It uploads two 14-day artifacts:
+The workflow is **Release**. It has two entry points:
 
-- `android-release` — AAB, APK and checksums
-- `ios-release` — IPA and checksums
+- **Tag push:** `git tag v0.2.0 && git push origin v0.2.0` checks that the tag
+  is exactly `v` plus `versionName`, builds both platforms, and publishes a
+  GitHub Release with the AAB, APK, IPA and checksums. The release waits on the
+  `release` environment's reviewer.
+- **Manual dispatch:** **Actions → Release → Run workflow** builds the same
+  artifacts and uploads them as two 14-day artifacts, but deliberately does
+  not publish a release. Use it to test signing before creating a tag.
 
-Download them with:
+The tag check fails before any signing secret is touched when the tag and
+`version.properties` disagree. It also fails a tag such as `v0.2.0-preview`;
+preview tags are not release tags.
+
+Download artifacts from a manual run with:
 
 ```bash
 gh run download <run-id> --repo ewanc26/fathom
 ```
 
-The workflow is manual on purpose. It has no store credentials and cannot
-publish a build by itself.
+A successful tag run creates the GitHub Release automatically. The store
+uploads remain manual because the workflow has no Play or App Store Connect
+credentials.
 
 ## Upload to internal testing
 
@@ -162,13 +175,18 @@ number matches `version.properties`.
       commit the generated `iOS/project.yml` and `iOS/Info.plist` changes.
 - [ ] Confirm `python3 scripts/sync-version.py --check` passes.
 - [ ] Run shared tests, Android tests and build, and the iOS `FathomTests`.
-- [ ] Build signed artifacts with the release workflow or the local scripts.
+- [ ] Build signed artifacts with a manual **Release** dispatch first, or
+      run the local scripts, and confirm the signatures.
 - [ ] Smoke-test on a real account: enter a handle, check Now, Stats,
-      History and Profile; refresh once; run **Read everything**; disconnect
+      History and Profile; search History and jump to a month; open About and
+      confirm the version; refresh once; run **Read everything**; disconnect
       and confirm the saved history is gone.
+- [ ] Create and push the matching tag (`v<versionName>`); wait for the
+      protected environment approval and the GitHub Release.
 - [ ] Upload the AAB to Play internal testing and the IPA to TestFlight.
-- [ ] Verify both stores show the same version and build number.
-- [ ] Update the install links on the website once the site exists (#15).
+- [ ] Verify both stores show the same version and build number, and that
+      About shows the same build.
+- [ ] Update the install links on the website once signed builds exist (#24).
 - [ ] Record the commit, artifact hashes and tester links in the release notes.
 
 ## Rollback
@@ -194,10 +212,16 @@ periods, so treat the secrets as production credentials.
 
 ## Known gaps before a public listing
 
-- Privacy policy and terms (#16), and the public website (#15).
+- The `release` environment's signing secrets are not configured yet: the
+  Android upload keystore and the Apple Distribution certificate and profile.
+  Until they exist, both release jobs fail at their secret check.
+- The Play Console app and internal-testing track, and the App Store Connect
+  app record and internal tester group, still have to exist.
 - Store listing copy, support URL and screenshots from
   `docs/images/screens/`.
-- Automated Play/TestFlight uploads. This workflow stops at signed artifacts;
-  uploading is manual until the first internal build is proven.
-- The apps do not show their version or an About section yet (#20), so the
-  store is currently the only place a tester can confirm the build.
+- Automated Play/TestFlight uploads. This workflow stops at signed artifacts
+  and a GitHub Release; uploading is manual until the first internal build is
+  proven.
+- The website's custom-domain DNS (`fathom.ewancroft.uk`) is documented in
+  `website/README.md`; the Pages workflow publishes whether or not the CNAME
+  has resolved yet.
