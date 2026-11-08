@@ -72,8 +72,12 @@ jobs:
       - name: Check version sources
         run: python3 scripts/sync-version.py --check
 
-      - name: Check release scripts parse
-        run: bash -n scripts/release-android.sh scripts/release-ios.sh
+      - name: Check release tooling
+        run: |
+          bash -n scripts/release-android.sh scripts/release-ios.sh
+          node --check tools/release/publish.mjs
+          node --check tools/release/build-release-manifest.mjs
+          node --check tools/release/generate-ios-sbom.mjs
 
   ios:
     name: iOS unit tests
