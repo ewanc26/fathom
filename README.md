@@ -26,7 +26,7 @@ Read-only, and new. I would rather say so plainly.
 
 - **The dashboard works end to end.** All four screens draw from a full read of a real account, a second launch opens from the saved copy, and the reading banner can be dismissed while the read continues behind it.
 - **The figures are honest by construction.** A read that ends early is labelled partial rather than passed off as complete, and the runaway guard stops at 50,000 plays.
-- **Neither app has been run on a device.** Everything verified is Android emulator and iOS simulator, and there is no signed build yet, so installing Fathom still needs a toolchain.
+- **Neither app has been run on a device.** Everything verified is Android emulator and iOS simulator. There is no signed store build yet; the first Android development preview is a debug APK on [GitHub Releases](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0), and iOS still needs a toolchain or a future signed build.
 - **The write path is planned, not started.** Live scrobbling — OAuth, play qualification, an outbound queue and the controls that come with them — is designed in the issue tracker. Nothing here writes yet.
 
 The changelog is in [CHANGELOG.md](CHANGELOG.md), the conventions and the
@@ -223,9 +223,13 @@ APK and App Store Connect IPA from secrets in the protected `release`
 environment, and publishes them plus checksums on a GitHub Release. A manual
 dispatch builds the same artifacts without publishing. The environment now
 exists with a required reviewer, but its signing secrets are not configured, so
-no signed store build has been published; #24 tracks the first one. See
-[`docs/RELEASE.md`](docs/RELEASE.md) for signing secrets, local commands, the
-internal-testing checklist and rollback.
+no signed store build has been published; #24 tracks the first one. A debug
+Android development preview is attached to
+[preview-0.2.0](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0);
+it is installable beside a future release because its application ID ends in
+`.debug`, and it is not store-ready. See [`docs/RELEASE.md`](docs/RELEASE.md)
+for signing secrets, local commands, the internal-testing checklist and
+rollback.
 
 The public site lives in [`website/`](website/).
 [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to
@@ -246,9 +250,10 @@ no build step, no JavaScript, no analytics and no third-party requests.
 - **Incremental refresh trusts the saved tail.** A record edited or deleted
   below that tail is only picked up by **Read everything**; ordinary refresh is
   for new plays, not a rewritten repo.
-- **No published build.** The release workflow produces signed artifacts, but
-  Play internal testing and TestFlight are still manual and no build has been
-  uploaded.
+- **No signed store build.** The tag workflow produces signed artifacts once
+  the release environment has its signing secrets, but Play internal testing
+  and TestFlight are still manual and no store build has been uploaded. The
+  Android debug preview is a development build, not a substitute for one.
 - **Figures are local.** They are computed from this repo, not from teal.fm's
   network-wide stats endpoints, and the two are not the same measurement.
 - **No OAuth.** None is needed to read, and a half-implemented flow would be
