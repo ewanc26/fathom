@@ -18,6 +18,7 @@ import uk.ewancroft.fathom.shared.time.CivilDays
 import uk.ewancroft.fathom.shared.time.IsoInstant
 import uk.ewancroft.fathom.shared.xrpc.MAX_PAGE
 import uk.ewancroft.fathom.shared.xrpc.MAX_PLAYS
+import uk.ewancroft.fathom.shared.xrpc.RetryPolicy
 import uk.ewancroft.fathom.shared.xrpc.TealCollections
 import uk.ewancroft.fathom.shared.xrpc.Xrpc
 import uk.ewancroft.fathom.shared.xrpc.XrpcQuery
@@ -185,6 +186,17 @@ object FathomCore {
 
     /** The ceiling on plays one load reads, so the native paging loops agree. */
     fun playCeiling(): Int = MAX_PLAYS
+
+    // Both transports ask this policy rather than inventing their own waits.
+    fun retryMaxAttempts(): Int = RetryPolicy.MAX_ATTEMPTS
+
+    fun isRetryableStatus(status: Int): Boolean = RetryPolicy.isRetryableStatus(status)
+
+    fun retryDelayMillis(
+        attempt: Int,
+        retryAfterHeader: String?,
+        nowEpochSeconds: Long,
+    ): Long = RetryPolicy.delayMillis(attempt, retryAfterHeader, nowEpochSeconds)
 
     fun listRecordsQuery(repo: String, collection: String, cursor: String?, limit: Int): String =
         // Fully qualified on purpose: inside this object the unqualified name
