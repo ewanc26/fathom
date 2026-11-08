@@ -61,6 +61,11 @@ the account's own repo — is planned and tracked in the issue tracker.
   - Plain HTML and CSS served by GitHub Pages. `/privacy/` and `/terms/` are
     linked from the client metadata, both stores and the About sections.
     Claims here must describe the code, not an aspiration.
+- `tools/release/`
+  - `publish.mjs` builds/signs Android locally, accepts an exported iOS IPA,
+    and creates one unified `v<version>` GitHub Release. `build-release-manifest.mjs`
+    hashes the exact published binaries for CI attestation. Signing material
+    never enters GitHub Actions.
 
 ## Protocol notes that are easy to get wrong
 
@@ -134,7 +139,8 @@ python3 scripts/sync-version.py --check
   run `python3 scripts/sync-version.py` after a bump to write the iOS fields.
   Release signing comes from environment variables or the gitignored
   `Android/keystore.properties`; never commit a team, certificate, profile or
-  key. `docs/RELEASE.md` is the release contract.
+  key. `RELEASE_PROCESS.md` is the release contract: local signing, then CI
+  provenance only.
 
 State exactly what was verified and where — host, simulator, device. Never
 claim hardware you did not use. Neither app has been run on a device, and no
@@ -163,11 +169,12 @@ preferences and may be restored from a backup; the history never is.  `website/c
 History is searchable through `PlaySearchIndex`, and both apps group its
 results by local day. Undated plays are listed under **No date** rather than
 dropped. About reads the real build metadata, links the public site and shows
-the bundled AGPL text plus the shared third-party notices. The release
-workflow is tag-driven: `v<versionName>` checks `version.properties`, builds
-signed artifacts and publishes a GitHub Release; a manual dispatch builds
-without publishing. The `release` environment requires a reviewer and its
-signing secrets are still unset.
+the bundled AGPL text plus the shared third-party notices. Releases follow
+the Inkwell split: `tools/release/publish.mjs` builds/signs the APK locally,
+takes an exported iOS IPA, and creates one `v<version>` GitHub Release. The
+release workflow only adds SBOMs, a hashed manifest and provenance
+attestations; signing keys never enter Actions. No signed release has been
+published because the local signing material is not installed.
 
 ## Working rules
 

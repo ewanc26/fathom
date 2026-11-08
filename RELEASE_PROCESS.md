@@ -1,18 +1,30 @@
 # Releasing Fathom
 
-This is the first release path: it produces signed Android and iOS artifacts
-from one version source and publishes them on a GitHub Release when a tag
-matches. It does **not** upload to Play or App Store Connect yet, and no signed
-tester build has been published. The first internal build remains the
-acceptance test for #24.
+Fathom follows Inkwell's release split: **the signed binaries are built on the
+publisher's machine, and GitHub Actions only records provenance for the exact
+bytes that were published.** No signing key, certificate, profile or password
+is stored in GitHub.
 
-The protected `release` environment exists with a required reviewer. Its
-signing secrets are still unset, so a tag currently stops at the environment
-check rather than claiming a release.
+One version is one unified GitHub Release tagged `v<version>`, named
+`Fathom <version>`, with the platform artefacts that exist:
+
+- `Fathom-<version>.apk` for Android
+- `Fathom-<version>.ipa` for iOS
+
+The Play upload bundle (`.aab`) is a store artefact, not a GitHub Release
+asset. The release workflow then attaches:
+
+- `sbom-android-v<version>.spdx.json`
+- `sbom-ios-v<version>.spdx.json`
+- `release-manifest-v<version>.json`
+- a build-provenance attestation for the manifest and SBOMs
+
+The existing `preview-0.2.0` debug APK predates this contract. It remains a
+development preview; it is not a `v*` release and is not store-ready.
 
 ## One version source
 
-[`version.properties`](../version.properties) is the source:
+[`version.properties`](version.properties) is the only version source:
 
 ```properties
 versionName=0.2.0
@@ -31,71 +43,76 @@ python3 scripts/sync-version.py
 - `versionCode` is both the Android version code and the iOS build number.
   Every uploaded build needs a higher number on both stores. Reusing one is
   rejected by the stores and cannot be undone.
+- The release tag is exactly `v` plus `versionName`. The provenance workflow
+  rejects tags that are not `vX.Y.Z`.
 
-## Signing material
+## Publish locally
 
-Nothing under version control signs a release. Certificates, profiles,
-keystores and passwords live outside the repository; `.gitignore` also blocks
-common accidental copies.
-
-### GitHub environment
-
-The release workflow uses the protected `release` environment. Create it in
-**Settings → Environments** and add required reviewers. Add these environment
-secrets:
-
-| Secret | Android / iOS | Meaning |
-|--------|---------------|---------|
-| `ANDROID_KEYSTORE_BASE64` | Android | Base64 of the upload keystore (`.jks`) |
-| `ANDROID_KEYSTORE_PASSWORD` | Android | Keystore password |
-| `ANDROID_KEY_ALIAS` | Android | Upload key alias |
-| `ANDROID_KEY_PASSWORD` | Android | Upload key password |
-| `IOS_CERTIFICATE_BASE64` | iOS | Base64 of the Apple Distribution certificate (`.p12`) |
-| `IOS_CERTIFICATE_PASSWORD` | iOS | Password for the `.p12` |
-| `IOS_PROVISIONING_PROFILE_BASE64` | iOS | Base64 of the App Store provisioning profile |
-| `IOS_TEAM_ID` | iOS | Apple Developer team ID |
-| `IOS_PROVISIONING_PROFILE_SPECIFIER` | iOS | Profile name installed by the workflow |
-
-Encode a file on macOS with:
+The publisher is dry-run by default. Nothing is built, signed or uploaded
+until `--yes` is passed. Run it from `main` with the release commit already
+pushed to `origin/main`; it refuses a dirty tree or an unpushed commit.
 
 ```bash
-base64 -i path/to/file -o path/to/file.base64
+node tools/release/publish.mjs status
+node tools/release/publish.mjs android --yes --notes-file release-notes.md
+node tools/release/publish.mjs ios --ipa /path/to/Fathom-0.2.0-9.ipa --yes --notes-file release-notes.md
 ```
 
-The Apple certificate must be an **Apple Distribution** certificate, and the
-profile must match `uk.ewancroft.fathom` and contain that certificate. The
-workflow imports both into a temporary keychain and removes it afterwards.
+`status` is read-only and shows whether the APK and IPA for the source version
+are attached to the release.
 
-## Build locally
+When a release does not exist, the first publish creates it and the matching
+tag from the pushed `main` HEAD. Later platform uploads attach to the same
+release. If `--notes-file` is omitted, the publisher drafts a starting point
+from commit subjects; that draft is not finished release copy. A notes file is
+only used when the release is created. Edit an existing release body with:
 
-Set the version first, then run the platform script. Both scripts run
-`sync-version.py --check`, so an un-synced version fails before a build starts.
+```bash
+gh release edit v0.2.0 --notes-file release-notes.md
+```
 
-### Android
+`--skip-existing` makes a rerun a no-op when that exact platform asset is
+already attached.
+
+### Signing material
+
+Nothing under version control signs a release, and nothing in GitHub Actions
+does either. The old protected `release` environment and its secret names are
+no longer used and can be deleted.
+
+#### Android
+
+Set these four variables for the publisher, or use the gitignored
+`Android/keystore.properties` with `storeFile`, `storePassword`, `keyAlias`
+and `keyPassword`:
 
 ```bash
 export FATHOM_KEYSTORE_FILE="$PWD/release-upload.jks"
 export FATHOM_KEYSTORE_PASSWORD='…'
 export FATHOM_KEY_ALIAS='…'
 export FATHOM_KEY_PASSWORD='…'
-./scripts/release-android.sh
 ```
 
-The script runs the shared and Android tests, builds `bundleRelease` and
-`assembleRelease`, verifies the AAB with `jarsigner` and the APK with
-`apksigner`, and writes to `build/release/android/`:
+`tools/release/publish.mjs android` calls
+[`scripts/release-android.sh`](scripts/release-android.sh). That script runs
+the shared and Android tests, builds `bundleRelease` and `assembleRelease`,
+verifies the AAB with `jarsigner` and the APK with `apksigner`, and writes to
+`build/release/android/`:
 
 - `Fathom-<version>-<build>.aab` for Play
-- `Fathom-<version>-<build>.apk` for side-loading
-- `SHA256SUMS`
+- `Fathom-<version>-<build>.apk`, copied to the release name
+  `Fathom-<version>.apk`
+- `SHA256SUMS` for the local files; the GitHub asset is the manifest, not this
+  file
 
-`Android/keystore.properties` with `storeFile`, `storePassword`, `keyAlias`
-and `keyPassword` is supported as an alternative to the environment.
+The publisher independently checks that the APK is not signed with the Android
+debug key before uploading it.
 
-### iOS
+#### iOS
 
-Install the distribution certificate in the login keychain and the
-provisioning profile in `~/Library/MobileDevice/Provisioning Profiles`, then:
+Install the Apple Distribution certificate in the login keychain and the App
+Store provisioning profile in
+`~/Library/MobileDevice/Provisioning Profiles`, then export the IPA:
 
 ```bash
 export IOS_TEAM_ID='…'
@@ -109,38 +126,72 @@ IPA's `CFBundleShortVersionString` and `CFBundleVersion` match
 `version.properties`. Output is `build/release/ios/Fathom-<version>-<build>.ipa`
 plus `SHA256SUMS`.
 
-## Build and publish in CI
+Pass that IPA to `publish.mjs ios`. The publisher verifies its embedded
+version and build number, copies it to `Fathom-<version>.ipa`, and uploads it.
+Xcode archiving needs an interactive keychain, so the publisher deliberately
+does not build the IPA itself.
 
-The workflow is **Release**. It has two entry points:
+## Provenance in CI
 
-- **Tag push:** `git tag v0.2.0 && git push origin v0.2.0` checks that the tag
-  is exactly `v` plus `versionName`, builds both platforms, and publishes a
-  GitHub Release with the AAB, APK, IPA and checksums. The release waits on the
-  `release` environment's reviewer.
-- **Manual dispatch:** **Actions → Release → Run workflow** builds the same
-  artifacts and uploads them as two 14-day artifacts, but deliberately does
-  not publish a release. Use it to test signing before creating a tag.
+[`.github/workflows/release.yml`](.github/workflows/release.yml) is named
+**Release provenance**. It does **not** build, sign or publish an APK/IPA. It
+runs on:
 
-The tag check fails before any signing secret is touched when the tag and
-`version.properties` disagree. It also fails a tag such as `v0.2.0-preview`;
-preview tags are not release tags.
+- a `v*` tag push
+- a GitHub Release being published
+- manual dispatch with a published tag input
 
-Download artifacts from a manual run with:
+It checks out the tag, generates an Android dependency SBOM with
+`anchore/sbom-action`, generates the iOS SBOM, downloads the **exact** APK/IPA
+already attached to the release, hashes them, writes the release manifest,
+attests the manifest and SBOMs, and uploads those three files.
+
+The iOS target has no Swift Package Manager dependencies; its SBOM records that
+explicitly. The shared Kotlin framework's Gradle dependencies are covered by
+the Android SBOM.
+
+The workflow refuses to run until the release exists and has at least one
+binary. If a platform is added after the first publish, the publisher queues a
+fresh provenance run once both assets are present; you can also run
+**Actions → Release provenance → Run workflow** with the tag.
+
+### Why the binaries are not attested
+
+The APK and IPA are assembled and signed outside Actions. Attesting a CI
+rebuild would describe different bytes from the ones users download. Instead,
+the manifest records the SHA-256 of the exact published assets, and the
+workflow attests the manifest and SBOMs it genuinely produced. The manifest's
+`provenance.binariesBuiltInActions` field is `false`.
+
+### Verify a release
 
 ```bash
-gh run download <run-id> --repo ewanc26/fathom
+# 1. Download the manifest and SBOMs, then verify their attestation.
+gh release download vX.Y.Z --repo ewanc26/fathom \
+  --pattern "release-manifest-*.json" --pattern "sbom-*.spdx.json"
+gh attestation verify release-manifest-vX.Y.Z.json --owner ewanc26
+gh attestation verify sbom-android-vX.Y.Z.spdx.json --owner ewanc26
+gh attestation verify sbom-ios-vX.Y.Z.spdx.json --owner ewanc26
+
+# 2. Confirm the binary you downloaded matches the hash in the manifest.
+shasum -a 256 Fathom-X.Y.Z.apk
+shasum -a 256 Fathom-X.Y.Z.ipa
 ```
 
-A successful tag run creates the GitHub Release automatically. The store
-uploads remain manual because the workflow has no Play or App Store Connect
-credentials.
+Do not run `gh attestation verify` against the APK or IPA themselves: they
+were not built in Actions and have no matching attestation. The manifest's
+`.artifacts.apk.sha256` and `.artifacts.ipa.sha256` are the link between the
+attested document and the binary.
 
-## Upload to internal testing
+## Store handoff
+
+The publisher stops at the GitHub Release. Store uploads remain manual.
 
 ### Play internal testing
 
 1. Open Play Console → Fathom → Testing → Internal testing.
-2. Create a release and upload the `.aab` from `android-release`.
+2. Create a release and upload the `.aab` from
+   `build/release/android/`.
 3. Add the internal tester list, roll out, and open the opt-in link on a
    tester's device.
 4. Check that the release build and the debug build coexist; the debug
@@ -149,11 +200,7 @@ credentials.
 ### TestFlight internal testing
 
 App Store Connect needs the app record, a privacy policy URL and the internal
-tester group before the first upload. The privacy and support pages are still
-tracked by #16 and #15.
-
-Upload with an App Store Connect API key (the `.p8` belongs in
-`~/.appstoreconnect/private_keys/AuthKey_<key-id>.p8`):
+tester group before the first upload. Upload with:
 
 ```bash
 xcrun altool --upload-app \
@@ -173,20 +220,23 @@ number matches `version.properties`.
       `versionCode` increases for every uploaded build.
 - [ ] Edit `version.properties`, run `python3 scripts/sync-version.py`, and
       commit the generated `iOS/project.yml` and `iOS/Info.plist` changes.
+- [ ] Update `CHANGELOG.md` and prepare the release notes.
 - [ ] Confirm `python3 scripts/sync-version.py --check` passes.
 - [ ] Run shared tests, Android tests and build, and the iOS `FathomTests`.
-- [ ] Build signed artifacts with a manual **Release** dispatch first, or
-      run the local scripts, and confirm the signatures.
+- [ ] Export the signed IPA and build the signed APK locally. Confirm
+      `apksigner` shows the upload key, not the debug key.
 - [ ] Smoke-test on a real account: enter a handle, check Now, Stats,
       History and Profile; search History and jump to a month; open About and
       confirm the version; refresh once; run **Read everything**; disconnect
       and confirm the saved history is gone.
-- [ ] Create and push the matching tag (`v<versionName>`); wait for the
-      protected environment approval and the GitHub Release.
+- [ ] Run `node tools/release/publish.mjs android --yes --notes-file <file>`
+      and `node tools/release/publish.mjs ios --ipa <file> --yes`.
+- [ ] Wait for **Release provenance** and confirm the manifest and both SBOMs
+      are attached.
 - [ ] Upload the AAB to Play internal testing and the IPA to TestFlight.
 - [ ] Verify both stores show the same version and build number, and that
       About shows the same build.
-- [ ] Update the install links on the website once signed builds exist (#24).
+- [ ] Update the install links on the website once signed builds exist.
 - [ ] Record the commit, artifact hashes and tester links in the release notes.
 
 ## Rollback
@@ -204,24 +254,24 @@ higher build.
   `versionCode`; do not overwrite a downloaded artifact or a store upload.
 - **Bad commit:** revert it in a new commit, raise `versionCode` again and
   rebuild. Do not move or reuse a release tag.
+- **Bad release notes:** edit the GitHub Release; provenance does not need to
+  be rerun unless the binaries or SBOMs changed.
+- **Signing key exposed:** stop, revoke the certificate or request an upload
+  key reset, replace the local key, and rebuild. Both are store-level
+  operations with waiting periods.
 
-If a signing key is exposed, stop: revoke the certificate or request an upload
-key reset, rotate the GitHub secret, and rebuild. A Play upload-key reset and
-an Apple certificate revocation are both store-level operations with waiting
-periods, so treat the secrets as production credentials.
+## Known gaps
 
-## Known gaps before a public listing
-
-- The `release` environment's signing secrets are not configured yet: the
-  Android upload keystore and the Apple Distribution certificate and profile.
-  Until they exist, both release jobs fail at their secret check.
+- The local machine has no Apple Distribution certificate or App Store
+  provisioning profile, and no Android upload keystore. No signed `v0.2.0`
+  release has been published; only the debug preview exists.
 - The Play Console app and internal-testing track, and the App Store Connect
   app record and internal tester group, still have to exist.
 - Store listing copy, support URL and screenshots from
   `docs/images/screens/`.
-- Automated Play/TestFlight uploads. This workflow stops at signed artifacts
-  and a GitHub Release; uploading is manual until the first internal build is
-  proven.
+- Automated Play/TestFlight uploads. The publisher stops at signed local
+  artifacts and a GitHub Release; store uploads are manual until the first
+  internal build is proven.
 - The website's custom-domain DNS (`fathom.ewancroft.uk`) is documented in
   `website/README.md`; the Pages workflow publishes whether or not the CNAME
   has resolved yet.
