@@ -62,15 +62,36 @@ the account's own repo — is planned and tracked in the issue tracker.
 - `fm.teal.feed.play` requires only `trackName`. `artists` can be present and
   empty, and `trackName` can be empty in a status record. Never assume a play
   has a track or an artist.
+- A `listRecords` envelope carries `uri` and `cid`; both are copied onto the
+  play. Deduplicate by URI only: the same track played twice is two plays,
+  while the same URI is one record.
+- A complete saved read is a stopping point only when every cached play has a
+  URI. Page newest-first until a whole page is already known; a page with a
+  new or unidentified record keeps the read going. A partial cache always
+  triggers a full read, and **Read everything** is the escape hatch for
+  edited, deleted or backfilled records below the saved tail.
 - `fm.teal.actor.status` and `fm.teal.actor.profile` are keyed `literal:self`,
   so `getRecord` at that key is the right read. A 400/404 there means "not
   written", not "failed".
+- A play with a missing or unreadable `playedTime` is counted by
+  `undatedPlays` in every period. All-time totals include it; a window cannot,
+  and History states how many records it could not place. Never invent a
+  timestamp.
 - A status record survives its `expiry`. Both the expiry and the presence of a
-  track have to be checked before saying something is playing.
+  track have to be checked before saying something is playing; when `expiry`
+  is absent, the lifetime is ten minutes after `time`. `TealStatus.isLive` is
+  the one implementation of both rules, and both apps call it.
 - `nowapi.teal.fm/xrpc/fm.teal.actor.getStatus` returns `{did, isListening,
   message}` — not the lexicon's `statusView`. Do not build on it.
 - `com.atproto.repo.listRecords` caps `limit` at 100 and returns newest first
   by default. Do not send `reverse: false`; leave it unset.
+- A 404 from `listRecords` is an empty namespace. A 400 is not: AT Protocol
+  also uses it for an invalid cursor or malformed request, so it must leave the
+  read partial. Only `getRecord` treats a 400 as absence, because a missing
+  `literal:self` record is normal.
+- Idempotent reads retry 429, 5xx, timeouts and connection failures three
+  times through `RetryPolicy`; never retry 400 or 404. `Retry-After` is
+  honoured in seconds and HTTP-date form, and every wait is capped.
 - Facet byte offsets and timestamps are not character indices. Day bucketing is
   by the listener's offset, through an explicit floor division.
 
@@ -80,27 +101,37 @@ the account's own repo — is planned and tracked in the issue tracker.
 # Shared core tests (the real coverage)
 cd Android && ./gradlew :shared:jvmTest
 
-# Android debug build
-cd Android && ./gradlew :app:assembleDebug
+# Android JVM tests and debug build
+cd Android && ./gradlew :app:testDebugUnitTest :app:assembleDebug
 
 # iOS: framework, project, build
 ./scripts/build-xcframework.sh
 cd iOS && xcodegen generate
 xcodebuild -project Fathom.xcodeproj -scheme Fathom \
   -destination 'platform=iOS Simulator,name=<installed device>' build test
+
+# Version source must match the generated iOS fields
+python3 scripts/sync-version.py --check
 ```
 
 - `./gradlew test` does **not** run the shared tests: the KMP JVM target
-  exposes `jvmTest`, not `test`.
+  exposes `jvmTest`, not `test`. `:app:testDebugUnitTest` runs the Android
+  transport test and needs no device or network.
 - Gradle 8.13 does not run on JDKs newer than 23. Set `JAVA_HOME` to a JDK
   17–23 (or the build fails before it compiles anything).
 - `xcodebuild` needs the XCFramework, which is gitignored and must be built
   first. Rebuild it after any change under `shared/`.
 - The Xcode project is generated. `iOS/Fathom.xcodeproj` is gitignored;
   `iOS/project.yml` is the source.
+- `version.properties` is the one version source. Android reads it directly;
+  run `python3 scripts/sync-version.py` after a bump to write the iOS fields.
+  Release signing comes from environment variables or the gitignored
+  `Android/keystore.properties`; never commit a team, certificate, profile or
+  key. `docs/RELEASE.md` is the release contract.
 
 State exactly what was verified and where — host, simulator, device. Never
-claim hardware you did not use. Neither app has been run on a device.
+claim hardware you did not use. Neither app has been run on a device, and no
+signed tester build has been uploaded.
 
 ## Conventions
 
@@ -113,19 +144,21 @@ claim hardware you did not use. Neither app has been run on a device.
 
 ## Current state
 
-Read-only. No OAuth, no writes, no secure storage, no image loading, no cache,
-no database. Four screens fed by one fetch. `website/client-metadata.json`
-records the scopes that a write would need.
+Read-only. No OAuth, no writes, no secure storage, no image loading, no
+database. Four screens fed by one fetch, plus one saved-history file rewritten
+whole after each read and excluded from device backups, and one status record
+re-read a minute while the dashboard is in the foreground and no history read
+is running. A complete saved history is a checkpoint for an incremental
+refresh; a partial one always forces a full read, and Profile's **Read
+everything** action forces one on demand. The handle and period stay in ordinary
+preferences and may be restored from a backup; the history never is.
+`website/client-metadata.json` records the scopes that a write would need.
 
 ## Working rules
 
-- Inspect the README, manifests, CI workflows, and nearby code before editing.
-- Preserve existing architecture, naming, formatting, and error-handling conventions.
+- Inspect the README, manifests, CI workflows and nearby code before editing.
+- Preserve existing architecture, naming, formatting and error handling.
 - Use project scripts for validation; never claim checks you did not run.
-- Keep changes scoped and update tests or documentation when behavior changes.
-- Use feature branches and pull requests.
-- Treat generated files, credentials, deployment configuration, and release metadata as sensitive.
-
-## Recent history
-
-ci: add checks for shared, Android, icons and iOS; docs: show the dashboard screens in the README; feat: let the reading status be dismissed; docs: show the icon and launch mark in the README; feat: carry the bar mark into the launch screens; feat(ios): supply explicit dark and tinted icons; feat: give the app an icon on both platforms; feat: read the repo again on a pull; feat: save the history and count it as it loads; feat: read the whole play history rather than the newest thousand
+- Keep changes scoped and update tests or documentation when behaviour changes.
+- Use feature branches and pull requests, and treat generated files,
+  credentials, deployment configuration and release metadata as sensitive.

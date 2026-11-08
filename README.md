@@ -13,9 +13,9 @@
 A native teal.fm client for iOS and Android.
 
 Fathom reads the plays already in your AT Protocol repo and turns them into a
-listening dashboard: what is playing now, what today has been, top artists and
-releases over 7 days, 30 days or all time, and the full history grouped by the
-day you actually had.
+listening dashboard: what is playing now, what today has been, top artists,
+releases and tracks over 7 days, 30 days or all time, and the full history
+grouped by the day you actually had.
 
 It is a **reader**. It never writes a record, never asks for a password and
 never holds a token.
@@ -61,30 +61,45 @@ research behind reading the repo at all.
 | `iOS/` | iOS client (SwiftUI), with a generated Xcode project. |
 | `lexicons/` | The `fm.teal.*` lexicons, vendored from [teal-fm/teal](https://github.com/teal-fm/teal) unmodified. |
 | `website/` | The OAuth client metadata Fathom would need if it ever writes. Unused today. |
-| `docs/` | Protocol research, architecture, and the dashboard's design. |
+| `docs/` | Protocol research, architecture, the dashboard's design, and the release checklist. |
+| `.github/workflows/` | CI and the manual signed-artifact release workflow. |
 
 ## Features
 
 - **Now** — what is playing, from the account's `fm.teal.actor.status` record,
   including whether it has expired; today's plays, today's time and the current
-  day streak; a fourteen-day bar chart; the four most recent plays.
+  day streak; a fourteen-day bar chart; the four most recent plays. The status
+  is re-read once a minute while the app is in the foreground and no history
+  read is running, so an expired card stops claiming a track is playing.
 - **Stats** — plays, time in tracks, artists, releases and tracks for 7 days,
-  30 days or all time; the busiest day and the most used service; top artists
-  and top releases with shares of the leader.
+  30 days or all time; the busiest day and the most used service; top artists,
+  releases and tracks, each with a share of the leader.
 - **History** — every play read, grouped by the local day, with relative times
-  and the length each record declared.
+  and the length each record declared. Plays with no readable timestamp are
+  counted at the end rather than silently dropped.
 - **Profile** — the teal.fm profile record, featured item, DID, and a plain
   statement of where the figures come from.
 - **Saved history** — a completed read is written to app-private storage, so a
   second launch draws the dashboard immediately and refreshes behind it. A
-  saved copy keeps the read's completeness label, so a partial history is
-  still labelled partial when it reopens.
-- **Refresh** — pull down on any screen, or use the Refresh action, to read
-  the repo again without relaunching. The figures already on screen stay while
-  the new read arrives.
+  complete saved copy is also the stopping point for an incremental read: only
+  pages newer than the saved tail are fetched. The file is excluded from device
+  backups. A saved copy keeps the read's completeness label, so a partial
+  history is still labelled partial when it reopens.
+- **Refresh** — pull down on any screen, or use the Refresh action, to read new
+  plays since the saved copy. A refresh that stops on the first known page does
+  not flash the reading banner. Profile's **Read everything** re-scans the whole
+  history after an edit, deletion or backfill. The figures already on screen
+  stay while the new read arrives.
 - **Background reads** — the dashboard fills in as pages arrive, and the reading
   banner can be dismissed without stopping the read. The next read brings the
   banner back.
+- **Resilient paging** — transient PDS rate limits, 5xx responses and network
+  drops are retried three times with bounded, jittered backoff and
+  `Retry-After`; a rejected page (400) keeps what was read and labels the
+  history partial, while a 404 still means an empty namespace.
+- **Record identity** — each play keeps the AT URI of its record, so
+  overlapping pages and restored caches are deduplicated; two plays of the
+  same track at different times still count twice.
 - Reads both `fm.teal.*` and the pre-migration `fm.teal.alpha.*` namespace, so
   an account mid-migration keeps its older history.
 - Works for any account on any PDS: the DID is resolved through the PLC
@@ -113,10 +128,11 @@ Requires JDK 17–23 (Gradle 8.13 refuses newer), Android SDK 36, and
 
 ```bash
 ./gradlew :shared:jvmTest
+./gradlew :app:testDebugUnitTest
 ```
 
-`./gradlew test` does not run them: the KMP JVM target exposes `jvmTest`, not
-`test`, so the aggregate task skips `:shared`.
+`./gradlew test` does not run the shared tests: the KMP JVM target exposes
+`jvmTest`, not `test`, so the aggregate task skips `:shared`.
 
 ### iOS
 
@@ -166,12 +182,14 @@ them.
 ## Testing
 
 - `shared/src/commonTest/` holds the real coverage: timestamp parsing and UTC
-  bucketing, AT URI validation, query encoding, tolerant record decoding, and
-  the statistics themselves.
+  bucketing, AT URI validation and record-level deduplication, incremental
+  stop/merge rules, query encoding, tolerant record decoding, and the
+  statistics themselves.
 - `iOS/FathomTests/` covers the Swift-facing facade — that the bridge still
   carries a play, a page and a computed figure.
-- Android has no unit tests of its own: everything worth testing is in the
-  shared core, and the app's remaining logic is transport and layout.
+- Android has a JVM suite for the transport's retry and error paths and the
+  repository's partial/absent paging (`:app:testDebugUnitTest`, run by CI);
+  everything worth testing about the figures is in the shared core.
 
 Both apps have been run against a real account (`ewancroft.uk`) on an Android
 emulator and an iOS simulator. That run is what found a facade method that
@@ -183,6 +201,20 @@ The iOS account run lives in `iOS/FathomUITests/` and in the `FathomAccount`
 scheme, separate from the default scheme because it needs the public network
 and about five minutes.
 
+## Releases
+
+The version and build number live in [`version.properties`](version.properties).
+Android reads that file directly; iOS is synchronised into `project.yml` and
+`Info.plist` by `python3 scripts/sync-version.py`, and CI rejects drift. Every
+uploaded build must raise `versionCode`, which is also the iOS build number.
+
+The manual [Release artifacts](.github/workflows/release.yml) workflow is set
+up to build a signed AAB and APK and a signed App Store Connect IPA from
+secrets in the protected `release` environment. It does not upload to either
+store yet. See [`docs/RELEASE.md`](docs/RELEASE.md) for signing secrets, local
+commands, the internal-testing checklist and rollback. No tester build has
+been published yet; #24 tracks the first one.
+
 ## Limitations
 
 - **Read-only.** There is no scrobbling, no profile editing and no status
@@ -190,9 +222,15 @@ and about five minutes.
 - **Long first loads.** The history is read a hundred plays at a time, so an
   account with tens of thousands of plays takes minutes to read the first
   time; the dashboard opens on the newest page and counts the plays it has
-  reached while the rest arrive. Later launches open from the saved copy while
-  that read runs again. The guard stops at 50,000 plays, and anything read
-  short of the end is labelled partial.
+  reached while the rest arrive. Later launches open from the saved copy and
+  usually need only the pages above its tail. The guard stops a full read at
+  50,000 plays, and anything read short of the end is labelled partial.
+- **Incremental refresh trusts the saved tail.** A record edited or deleted
+  below that tail is only picked up by **Read everything**; ordinary refresh is
+  for new plays, not a rewritten repo.
+- **No published build.** The release workflow produces signed artifacts, but
+  Play internal testing and TestFlight are still manual and no build has been
+  uploaded.
 - **Figures are local.** They are computed from this repo, not from teal.fm's
   network-wide stats endpoints, and the two are not the same measurement.
 - **No OAuth.** None is needed to read, and a half-implemented flow would be

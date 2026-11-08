@@ -17,7 +17,11 @@ The opening screen answers what is happening and what today has been.
 
 1. **Now playing** — the status record, when it is live. It shows the track,
    the artist and the time playback started. When it is not live the card still
-   appears, saying so, because an empty top of the screen reads as a bug.
+   appears, saying so, because an empty top of the screen reads as a bug. The
+   record is re-read once a minute while the app is in the foreground and no
+   history read is running: a status outlives its expiry, and an app left open
+   must not make it ageless. When a record carries no `expiry`, the lexicon's
+   ten-minute life after `time` applies.
 2. **Today** — three tiles: plays today, time today, day streak. Three is the
    limit; a fourth would push the numbers below the fold on a small phone.
 3. **Last 14 days** — a bar chart, one bar per day. A day with no plays is a
@@ -37,27 +41,40 @@ Those are teal.fm's own period values, so the vocabulary survives if an AppView
 ever answers these questions.
 
 Then five totals, then the busiest day and the most used service, then top
-artists and top releases with a bar showing each one's share of the leader.
+artists, releases and tracks with a bar showing each one's share of the
+leader. A track carries its artist underneath, because a title alone is not
+always enough to know which recording was played.
 
 The provenance line at the bottom is part of the design, not a disclaimer:
 these figures are computed from this repo, and teal.fm's stats endpoints
 aggregate across the network. Both are legitimately "top artists" and they are
-different numbers.
+different numbers. The same line reports records that could not be decoded and
+plays that carry no readable timestamp, so neither disappears without a word.
 
 ### History
 
 Every play read, grouped by day with the day's name as a heading. Times are
 relative within a week and a date beyond it. The length shown is the length the
 record declared, which is not a measurement of time listened — the app never
-claims otherwise.
+claims otherwise. Plays with no readable timestamp cannot be grouped, so a line
+at the end says how many were counted and left out; the number is the same
+whichever period Stats is showing. When a read stops early, the line also says
+why — a rate limit, a rejected page or a dropped connection — rather than only
+that the history is partial.
 
 ### Profile
 
 Who the dashboard is about, and what it is reading. The account panel states
 the DID, the handle, how many plays were read and whether a teal profile record
 exists. The method panel states the namespace rule and the local-computation
-rule in plain sentences. Disconnect is the only action; it deletes the saved
-history and forgets the handle.
+rule in plain sentences. **Read everything** is the deliberate full re-scan:
+ordinary refresh trusts the saved tail, so an edited, deleted or backfilled
+record needs this action. Disconnect is the other action; it deletes the saved
+history and forgets the handle. The footer also says the saved history is
+excluded from device backups, because a cache that can be rebuilt should not
+outlive the app in a backup. The saved format is versioned; an old file, or one
+without record identity, is discarded and rebuilt rather than used as a
+stopping point.
 
 ## Colour and type
 
@@ -94,10 +111,11 @@ The same four screens, drawn with each platform's own conventions:
 
 - **Android** uses a Material 3 `NavigationBar`, a `TopAppBar` with a Refresh
   action, pull-to-refresh on every tab, `FilterChip` for the period and cards
-  with a 20 dp corner radius.
+  with a 20 dp corner radius. **Read everything** lives on Profile beside
+  Disconnect, where the full re-scan is explained.
 - **iOS** uses a `TabView` with SF Symbols, a navigation title with a toolbar
   button and pull-to-refresh, a segmented `Picker` and a plain `List` for
-  History.
+  History. Profile carries the **Read everything** button and its explanation.
 
 Neither is a port of the other. The KMP boundary is logic; presentation stays
 native.
