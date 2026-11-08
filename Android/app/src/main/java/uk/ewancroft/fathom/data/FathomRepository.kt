@@ -35,6 +35,14 @@ data class Dashboard(
     val sampled: Boolean,
     val skippedRecords: Int,
     val usedLegacyNamespace: Boolean,
+    /** The PDS this read came from; null for a copy restored from disk. */
+    val pds: String? = null,
+)
+
+/** One status re-read, plus the PDS it came from so the next poll can reuse it. */
+data class StatusRefresh(
+    val pds: String,
+    val status: TealStatus?,
 )
 
 /**
@@ -265,6 +273,24 @@ class FathomRepository(private val client: TealClient = TealClient()) {
         )
     }
 
+    /**
+     * Re-reads just the status record for [dashboard].
+     *
+     * The status is the one thing on the dashboard that changes without the
+     * repo changing, and it expires in ten minutes. One `getRecord` a minute
+     * keeps it honest; plays and figures are untouched. Unlike the initial
+     * load, a network failure is thrown rather than turned into "no status":
+     * clearing a live card because one poll failed would be a worse lie than
+     * one stale minute.
+     */
+    suspend fun refreshStatus(dashboard: Dashboard): StatusRefresh {
+        val pds = dashboard.pds ?: client.pdsFor(dashboard.did)
+        return StatusRefresh(
+            pds = pds,
+            status = loadStatus(pds, dashboard.did, allowFailure = false),
+        )
+    }
+
     private suspend fun loadProfile(pds: String, did: String): TealProfile? {
         for (collection in TealCollections.PROFILES) {
             val page = runCatching {
@@ -275,11 +301,30 @@ class FathomRepository(private val client: TealClient = TealClient()) {
         return null
     }
 
-    private suspend fun loadStatus(pds: String, did: String): TealStatus? {
+    /**
+     * The status record, or null when neither namespace has one.
+     *
+     * The initial dashboard load treats every failure as "no status", because
+     * a missing status is the normal state of an account whose tracker is not
+     * running. A poll passes `allowFailure = false` so that a network problem
+     * cannot be mistaken for a deleted record and clear a live card.
+     */
+    private suspend fun loadStatus(
+        pds: String,
+        did: String,
+        allowFailure: Boolean = true,
+    ): TealStatus? {
         for (collection in TealCollections.STATUSES) {
-            val body = runCatching { client.getRecord(pds, did, collection, RKEY_SELF) }
-                .getOrNull() ?: continue
-            TealJson.decodeSingleRecord<TealStatus>(body)?.let { return it.value }
+            val body = try {
+                client.getRecord(pds, did, collection, RKEY_SELF)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (failure: FathomException) {
+                if (!allowFailure) throw failure
+                continue
+            }
+            val entry = body?.let { TealJson.decodeSingleRecord<TealStatus>(it) } ?: continue
+            return entry.value
         }
         return null
     }

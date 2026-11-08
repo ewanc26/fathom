@@ -2,6 +2,7 @@ package uk.ewancroft.fathom.shared.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import uk.ewancroft.fathom.shared.time.IsoInstant
 
 /**
  * A content-addressed reference to a blob, as a record stores it.
@@ -65,7 +66,7 @@ data class FeaturedItem(
  * lexicon asks clients to assume ten minutes after `time` when it is absent.
  *
  * Real records exist with an empty `trackName` and an empty artist array —
- * a tracker with nothing to report still writes a status — so [isListening]
+ * a tracker with nothing to report still writes a status — so [isLive]
  * checks for a track rather than for the presence of the record.
  */
 @Serializable
@@ -75,12 +76,30 @@ data class TealStatus(
     val expiry: String? = null,
     val item: Play? = null,
 ) {
-    /** True when this status names a track and has not expired by [nowEpochSeconds]. */
+    /**
+     * True when this status names a track and is still live at [nowEpochSeconds].
+     *
+     * The lexicon asks clients to assume ten minutes after `time` when a
+     * record carries no `expiry`. A record with neither an expiry nor a
+     * readable `time` has no evidence of liveness, so it is not shown as
+     * playing rather than left claiming a track forever.
+     */
+    fun isLive(nowEpochSeconds: Long): Boolean =
+        isListening(nowEpochSeconds, IsoInstant.parse(expiry))
+
+    /** The same check with an already-parsed expiry, for callers that hold one. */
     fun isListening(nowEpochSeconds: Long, expiryEpochSeconds: Long?): Boolean {
         val track = item ?: return false
         if (!track.hasTrack()) return false
-        val end = expiryEpochSeconds ?: return true
+        val end = expiryEpochSeconds
+            ?: IsoInstant.parse(time)?.plus(STATUS_LIFETIME_SECONDS)
+            ?: return false
         return nowEpochSeconds < end
+    }
+
+    companion object {
+        /** The lexicon's fallback lifetime: ten minutes after `time` when `expiry` is absent. */
+        const val STATUS_LIFETIME_SECONDS = 10 * 60L
     }
 }
 

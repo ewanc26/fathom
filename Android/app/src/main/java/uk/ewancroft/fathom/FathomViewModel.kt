@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +50,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     private var loadJob: Job? = null
+    private var statusJob: Job? = null
 
     init {
         val identity = _state.value.identity
@@ -216,6 +219,57 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * Re-reads the status record once a minute while the dashboard is
+     * resumed.
+     *
+     * A status record outlives its expiry, so without this the opening card
+     * would go on naming a track long after it stopped. Only the status is
+     * re-read: plays and figures stay where they are.
+     */
+    fun startStatusPolling() {
+        if (statusJob?.isActive == true) return
+        statusJob = viewModelScope.launch {
+            refreshStatus()
+            while (isActive) {
+                delay(STATUS_REFRESH_MILLIS)
+                refreshStatus()
+            }
+        }
+    }
+
+    fun stopStatusPolling() {
+        statusJob?.cancel()
+        statusJob = null
+    }
+
+    private suspend fun refreshStatus() {
+        val current = _state.value
+        val dashboard = current.dashboard ?: return
+        if (current.loading || current.connecting) return
+
+        val refreshed = try {
+            repository.refreshStatus(dashboard)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            // A failed poll is not a dashboard failure: keep the last status
+            // and try again in a minute.
+            return
+        }
+
+        _state.update { state ->
+            val latest = state.dashboard
+            if (latest == null || latest.did != dashboard.did) {
+                state
+            } else {
+                state.copy(
+                    dashboard = latest.copy(pds = refreshed.pds, status = refreshed.status),
+                )
+            }
+        }
+    }
+
     fun selectPeriod(period: Period) {
         if (period == _state.value.period) return
         store.savePeriod(period)
@@ -246,9 +300,15 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun disconnect() {
+        stopStatusPolling()
         loadJob?.cancel()
         cache.clear()
         store.clearIdentity()
         _state.value = UiState(identity = null, period = _state.value.period)
+    }
+
+    private companion object {
+        /** One small record read a minute: enough for a ten-minute status to age out. */
+        const val STATUS_REFRESH_MILLIS = 60_000L
     }
 }

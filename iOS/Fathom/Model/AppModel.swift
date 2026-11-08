@@ -9,12 +9,14 @@ struct DashboardSnapshot {
     let did: String
     let handle: String?
     let profile: TealProfile?
-    let status: TealStatus?
+    var status: TealStatus?
     let plays: [Play]
     let stats: ListeningStats
     let sampled: Bool
     let skipped: Int
     let usedLegacyNamespace: Bool
+    /// The PDS this read came from, so a status poll need not ask PLC again.
+    var pds: String? = nil
 }
 
 /// Everything a screen can ask the dashboard to do.
@@ -41,6 +43,11 @@ final class AppModel: ObservableObject {
     /// Bumped whenever a load starts or the account is dropped, so a read that
     /// has been overtaken cannot write its partial history over a newer one.
     private var loadToken = 0
+
+    /// The status poll, alive only while the dashboard is on screen and the
+    /// app is active. A status record outlives its expiry, so without this the
+    /// opening card would go on naming a track long after it stopped.
+    private var statusTask: Task<Void, Never>?
 
     private static let identityKey = "fathom.identity"
     private static let periodKey = "fathom.period"
@@ -158,6 +165,50 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Starts the once-a-minute status read while the dashboard is on screen.
+    ///
+    /// Only the status is re-read; plays and figures stay where they are.
+    func startStatusPolling() {
+        guard statusTask == nil else { return }
+        statusTask = Task { [weak self] in
+            await self?.refreshStatus()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                if Task.isCancelled { break }
+                await self?.refreshStatus()
+            }
+        }
+    }
+
+    func stopStatusPolling() {
+        statusTask?.cancel()
+        statusTask = nil
+    }
+
+    /// One status read. A failed poll is not a dashboard failure: the previous
+    /// status stays and the next minute tries again, because a transient
+    /// network problem is not evidence that playback stopped.
+    private func refreshStatus() async {
+        guard !loading, !connecting, let snapshot else { return }
+        let token = loadToken
+
+        do {
+            let refreshed = try await loader.refreshStatus(for: snapshot)
+            guard token == loadToken,
+                  let current = self.snapshot,
+                  current.did == snapshot.did else { return }
+
+            var updated = current
+            updated.pds = refreshed.pds
+            updated.status = refreshed.status
+            self.snapshot = updated
+        } catch is CancellationError {
+            // Stopped on purpose.
+        } catch {
+            // Keep the last status; the next poll tries again.
+        }
+    }
+
     func selectPeriod(_ id: String) async {
         guard id != periodId else { return }
         periodId = id
@@ -175,6 +226,7 @@ final class AppModel: ObservableObject {
     }
 
     func disconnect() {
+        stopStatusPolling()
         loadToken += 1
         loading = false
         store.clear()

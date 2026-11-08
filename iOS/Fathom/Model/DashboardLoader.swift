@@ -1,6 +1,13 @@
 import Foundation
 import FathomShared
 
+/// One status poll's result: the record, and the PDS it came from so the next
+/// poll can skip the PLC lookup.
+struct StatusRefresh {
+    let pds: String
+    let status: TealStatus?
+}
+
 /// Turns a handle into a dashboard, reading the repo rather than an AppView.
 ///
 /// teal.fm's hosted stats endpoints are not reliably deployed, and the plays
@@ -216,6 +223,35 @@ struct DashboardLoader {
             skipped: skipped,
             usedLegacyNamespace: legacy
         )
+    }
+
+    /// The status record alone, for the periodic refresh.
+    ///
+    /// Unlike the initial load, a network failure is thrown rather than
+    /// treated as "no status": clearing a live card because one poll failed
+    /// would be a worse lie than one stale minute. A missing record (400/404)
+    /// is still an answer and arrives as nil.
+    func refreshStatus(for snapshot: DashboardSnapshot) async throws -> StatusRefresh {
+        let pds: String
+        if let known = snapshot.pds {
+            pds = known
+        } else {
+            pds = try await client.pds(for: snapshot.did)
+        }
+
+        for collection in FathomCore.shared.statusCollections() {
+            let json = try await client.getRecord(
+                pds: pds,
+                repo: snapshot.did,
+                collection: collection,
+                rkey: "self"
+            )
+            guard let json else { continue }
+            if let status = FathomCore.shared.status(json: json) {
+                return StatusRefresh(pds: pds, status: status)
+            }
+        }
+        return StatusRefresh(pds: pds, status: nil)
     }
 
     private func loadProfile(pds: String, did: String) async -> TealProfile? {

@@ -66,6 +66,7 @@ class TealJsonTest {
         val status = entry.value
         assertEquals("", status.item?.trackName)
         assertFalse(status.isListening(NOW, IsoInstant.parse(status.expiry)))
+        assertFalse(status.isLive(NOW))
     }
 
     @Test
@@ -75,7 +76,26 @@ class TealJsonTest {
 
         val status = entry.value
         assertTrue(status.isListening(NOW, IsoInstant.parse(status.expiry)))
+        assertTrue(status.isLive(NOW))
         assertEquals("Cherry Wine", status.item?.title())
+    }
+
+    @Test
+    fun fallsBackToTenMinutesAfterTimeWhenExpiryIsMissing() {
+        val status = TealStatus(
+            time = "2026-11-07T17:02:40Z",
+            item = Play(trackName = "Cherry Wine"),
+        )
+        val time = IsoInstant.parse(status.time)!!
+
+        assertTrue(status.isLive(time + 599))
+        assertFalse(status.isLive(time + 600))
+    }
+
+    @Test
+    fun doesNotClaimLivenessWithoutAnExpiryOrAReadableTime() {
+        val status = TealStatus(item = Play(trackName = "No clock"))
+        assertFalse(status.isLive(NOW))
     }
 
     @Test
