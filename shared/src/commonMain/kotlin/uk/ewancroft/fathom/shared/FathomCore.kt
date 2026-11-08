@@ -12,9 +12,12 @@ import uk.ewancroft.fathom.shared.model.Play
 import uk.ewancroft.fathom.shared.model.PlayRecords
 import uk.ewancroft.fathom.shared.model.TealProfile
 import uk.ewancroft.fathom.shared.model.TealStatus
+import uk.ewancroft.fathom.shared.search.PlaySearch
+import uk.ewancroft.fathom.shared.search.PlaySearchIndex
 import uk.ewancroft.fathom.shared.stats.ListeningStats
 import uk.ewancroft.fathom.shared.stats.Period
 import uk.ewancroft.fathom.shared.stats.StatsCalculator
+import uk.ewancroft.fathom.shared.time.CivilDate
 import uk.ewancroft.fathom.shared.time.CivilDays
 import uk.ewancroft.fathom.shared.time.IsoInstant
 import uk.ewancroft.fathom.shared.xrpc.MAX_PAGE
@@ -173,6 +176,16 @@ object FathomCore {
     fun epochDay(epochSeconds: Long, tzOffsetMinutes: Int): Long =
         CivilDays.epochDay(epochSeconds, tzOffsetMinutes)
 
+    /** `2026-11`, the stable key for a month in History's jump menu. */
+    fun monthKey(epochDay: Long): String =
+        CivilDate.fromEpochDay(epochDay).iso().take(7)
+
+    /** `Nov 2026`, for the same menu. */
+    fun monthLabel(epochDay: Long): String {
+        val date = CivilDate.fromEpochDay(epochDay)
+        return "${RelativeTime.monthName(date.month)} ${date.year}"
+    }
+
     /** Epoch seconds for an RFC 3339 timestamp, or `Long.MIN_VALUE` when unreadable. */
     fun instant(raw: String?): Long = IsoInstant.parse(raw) ?: Long.MIN_VALUE
 
@@ -191,6 +204,17 @@ object FathomCore {
 
     /** Collapses overlapping pages/cache entries by AT URI. */
     fun distinctPlays(plays: List<Play>): List<Play> = PlayRecords.distinct(plays)
+
+    /**
+     * Builds the searchable view of a loaded history for both apps.
+     *
+     * Swift keeps the returned index and asks it for each query; rebuilding
+     * it on every keystroke would fold the same records repeatedly.
+     */
+    fun searchIndex(plays: List<Play>): PlaySearchIndex = PlaySearchIndex(plays)
+
+    /** The folded form of [text], for diagnostics and tests across the bridge. */
+    fun foldedForSearch(text: String): String = PlaySearch.fold(text)
 
     /** True when a complete, identified read can seed an incremental refresh. */
     fun canResume(plays: List<Play>, complete: Boolean): Boolean =

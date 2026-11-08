@@ -29,6 +29,23 @@ final class FathomCoreTests: XCTestCase {
         XCTAssertEqual(FathomCore.shared.distinctPlays(plays: plays + plays).count, 1)
     }
 
+    func testSearchIndexCrossesTheBridge() {
+        let plays = FathomCore.shared.playsPage(json: Self.playPage).plays
+        let index = FathomCore.shared.searchIndex(plays: plays)
+
+        XCTAssertEqual(index.search(query: "aneurysm").count, 1)
+        XCTAssertEqual(index.search(query: "SXCREDMANE").count, 1)
+        XCTAssertEqual(index.search(query: "nothing").count, 0)
+        XCTAssertEqual(FathomCore.shared.foldedForSearch(text: "Beyoncé"), "beyonce")
+    }
+
+    func testMonthLabelsCrossTheBridge() {
+        let day = FathomCore.shared.epochDay(epochSeconds: 1_794_070_932, tzOffsetMinutes: 0)
+
+        XCTAssertEqual(FathomCore.shared.monthKey(epochDay: day), "2026-11")
+        XCTAssertEqual(FathomCore.shared.monthLabel(epochDay: day), "Nov 2026")
+    }
+
     func testIncrementalMergeCrossesTheBridge() {
         let plays = FathomCore.shared.playsPage(json: Self.playPage).plays
 
