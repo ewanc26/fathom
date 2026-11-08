@@ -10,6 +10,10 @@ import Foundation
 ///
 /// The JSON is written and read by the shared core, so the format is identical
 /// to Android's and this type only knows where the bytes live.
+///
+/// The directory is excluded from device backups and the file is written with
+/// complete file protection. It is a cache that can be rebuilt, not a second
+/// copy of the person's history that outlives the app.
 struct HistoryStore: Sendable {
     private let fileURL: URL
 
@@ -21,11 +25,16 @@ struct HistoryStore: Sendable {
             create: true
         )) ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
 
-        let directory = base.appendingPathComponent("Fathom", isDirectory: true)
+        var directory = base.appendingPathComponent("Fathom", isDirectory: true)
         try? FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true
         )
+        // Exclude the directory rather than the file: the atomic write
+        // replaces the file, but the directory keeps its resource values.
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? directory.setResourceValues(values)
         self.fileURL = directory.appendingPathComponent(fileName)
     }
 
@@ -38,7 +47,7 @@ struct HistoryStore: Sendable {
     /// Atomic on Apple's filesystems, so a kill mid-write leaves the old copy.
     func write(_ text: String) {
         guard let data = text.data(using: .utf8) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        try? data.write(to: fileURL, options: [.atomic, .completeFileProtection])
     }
 
     func clear() {

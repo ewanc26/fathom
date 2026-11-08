@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The same exclusion as backup_rules.xml for API 31 and newer. Device
+    transfer is included because moving a cache to a new phone is just as
+    unnecessary as restoring it from the cloud.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="fathom" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="fathom" />
+    </device-transfer>
+</data-extraction-rules>

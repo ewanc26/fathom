@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The saved history is a cache of public records that can be read again at
+    any time. Excluding it keeps a complete listening history out of a backup
+    the person did not ask Fathom to make. The handle and period are small
+    preferences and may be restored.
+-->
+<full-backup-content>
+    <exclude domain="file" path="fathom" />
+</full-backup-content>
