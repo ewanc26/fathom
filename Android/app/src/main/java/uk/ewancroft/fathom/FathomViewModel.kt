@@ -19,6 +19,8 @@ import uk.ewancroft.fathom.data.FathomException
 import uk.ewancroft.fathom.data.FathomRepository
 import uk.ewancroft.fathom.data.HistoryCacheStore
 import uk.ewancroft.fathom.data.IdentityStore
+import uk.ewancroft.fathom.shared.cache.CachedHistory
+import uk.ewancroft.fathom.shared.model.ReadCheckpoint
 import uk.ewancroft.fathom.shared.stats.Period
 
 /**
@@ -34,6 +36,8 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         val identity: String? = null,
         val period: Period = Period.ThirtyDays,
         val loading: Boolean = false,
+        /** True only once a read has actually published progress worth showing. */
+        val readingHistory: Boolean = false,
         /** True when the reading banner has been hidden for the current read. */
         val readingStatusDismissed: Boolean = false,
         val connecting: Boolean = false,
@@ -96,7 +100,12 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         _state.update {
-            it.copy(connecting = true, readingStatusDismissed = false, error = null)
+            it.copy(
+                connecting = true,
+                readingHistory = false,
+                readingStatusDismissed = false,
+                error = null,
+            )
         }
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
@@ -119,6 +128,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                                 dashboard = partial,
                                 connecting = false,
                                 loading = true,
+                                readingHistory = true,
                                 error = null,
                             )
                         }
@@ -145,6 +155,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                         dashboard = dashboard,
                         connecting = false,
                         loading = false,
+                        readingHistory = false,
                         error = null,
                     )
                 }
@@ -154,13 +165,19 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                 throw cancellation
             } catch (failure: FathomException) {
                 _state.update {
-                    it.copy(connecting = false, loading = false, error = failure.message)
+                    it.copy(
+                        connecting = false,
+                        loading = false,
+                        readingHistory = false,
+                        error = failure.message,
+                    )
                 }
             } catch (failure: Exception) {
                 _state.update {
                     it.copy(
                         connecting = false,
                         loading = false,
+                        readingHistory = false,
                         error = "Could not load that account. ${failure.message.orEmpty()}".trim(),
                     )
                 }
@@ -168,17 +185,30 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun refresh() {
+    fun refresh() = startRefresh(forceFull = false)
+
+    /** Re-reads the whole history, picking up edits, deletions and backfills. */
+    fun refreshEverything() = startRefresh(forceFull = true)
+
+    private fun startRefresh(forceFull: Boolean) {
         val identity = _state.value.identity ?: return
         loadJob?.cancel()
         _state.update {
-            it.copy(loading = true, readingStatusDismissed = false, error = null)
+            it.copy(
+                loading = true,
+                readingHistory = false,
+                readingStatusDismissed = false,
+                error = null,
+            )
         }
         loadJob = viewModelScope.launch {
             try {
+                val checkpoint = checkpoint(identity, forceFull)
                 val dashboard = repository.load(
                     identity = identity,
                     period = _state.value.period,
+                    checkpoint = checkpoint,
+                    forceFull = forceFull,
                     onProgress = { partial ->
                         // Keep the screens on the newest complete picture while
                         // the rest of the history arrives. The first publish
@@ -187,9 +217,13 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                         _state.update { state ->
                             val current = state.dashboard
                             if (current != null && partial.plays.size < current.plays.size) {
-                                state.copy(loading = true)
+                                state.copy(loading = true, readingHistory = true)
                             } else {
-                                state.copy(dashboard = partial, loading = true)
+                                state.copy(
+                                    dashboard = partial,
+                                    loading = true,
+                                    readingHistory = true,
+                                )
                             }
                         }
                     },
@@ -203,20 +237,36 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                         ),
                     )
                 }
-                _state.update { it.copy(dashboard = dashboard, loading = false, error = null) }
+                _state.update {
+                    it.copy(
+                        dashboard = dashboard,
+                        loading = false,
+                        readingHistory = false,
+                        error = null,
+                    )
+                }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (failure: FathomException) {
-                _state.update { it.copy(loading = false, error = failure.message) }
+                _state.update {
+                    it.copy(loading = false, readingHistory = false, error = failure.message)
+                }
             } catch (failure: Exception) {
                 _state.update {
                     it.copy(
                         loading = false,
+                        readingHistory = false,
                         error = "Could not refresh. ${failure.message.orEmpty()}".trim(),
                     )
                 }
             }
         }
+    }
+
+    private suspend fun checkpoint(identity: String, forceFull: Boolean): ReadCheckpoint? {
+        if (forceFull) return null
+        _state.value.dashboard?.let { return it.toCheckpoint() }
+        return withContext(Dispatchers.IO) { cache.read(identity)?.toCheckpoint() }
     }
 
     /**
@@ -312,3 +362,19 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         const val STATUS_REFRESH_MILLIS = 60_000L
     }
 }
+
+private fun Dashboard.toCheckpoint(): ReadCheckpoint = ReadCheckpoint(
+    did = did,
+    plays = plays,
+    skipped = skippedRecords,
+    legacy = usedLegacyNamespace,
+    complete = !sampled,
+)
+
+private fun CachedHistory.toCheckpoint(): ReadCheckpoint = ReadCheckpoint(
+    did = did,
+    plays = plays,
+    skipped = skipped,
+    legacy = legacy,
+    complete = !sampled,
+)

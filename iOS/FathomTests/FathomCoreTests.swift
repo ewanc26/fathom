@@ -15,10 +15,31 @@ final class FathomCoreTests: XCTestCase {
         XCTAssertEqual(page.cursor, "3mzq")
 
         let play = page.plays[0]
+        XCTAssertEqual(play.uri, "at://did:plc:x/fm.teal.feed.play/3mzq")
+        XCTAssertEqual(play.cid, "bafy")
         XCTAssertEqual(play.title(), "aneurysm")
         XCTAssertEqual(play.artistLine(), "SXCREDMANE & ZMAJOR")
         XCTAssertEqual(play.durationText(), "1:50")
         XCTAssertEqual(play.serviceLabel(), "Apple Music")
+    }
+
+    func testDeduplicatesPlaysByUriAcrossTheBridge() {
+        let plays = FathomCore.shared.playsPage(json: Self.playPage).plays
+
+        XCTAssertEqual(FathomCore.shared.distinctPlays(plays: plays + plays).count, 1)
+    }
+
+    func testIncrementalMergeCrossesTheBridge() {
+        let plays = FathomCore.shared.playsPage(json: Self.playPage).plays
+
+        XCTAssertTrue(FathomCore.shared.canResume(plays: plays, complete: true))
+        XCTAssertFalse(FathomCore.shared.canResume(plays: plays, complete: false))
+
+        let merger = PlayMerger(known: plays)
+        let merge = merger.addPage(page: plays)
+        XCTAssertTrue(merge.pageWasFullyKnown)
+        XCTAssertEqual(merge.newRecords, 0)
+        XCTAssertEqual(merger.plays.count, 1)
     }
 
     func testKeepsGoodRecordsWhenASiblingIsMalformed() {
@@ -77,11 +98,11 @@ final class FathomCoreTests: XCTestCase {
 
         XCTAssertEqual(stats.playCount, 1)
         XCTAssertEqual(stats.recentDays.count, 14)
+        XCTAssertEqual(stats.recentDays.last?.dayKey, "2026-11-07")
         XCTAssertEqual(stats.recentPlayCount, 1)
         XCTAssertEqual(stats.topTracks.count, 1)
         XCTAssertEqual(stats.topTracks.first?.name, "aneurysm")
         XCTAssertEqual(stats.topTracks.first?.artist, "SXCREDMANE & ZMAJOR")
-        XCTAssertEqual(stats.recentDays.last?.dayKey, "2026-11-07")
     }
 
     private static let playPage = """

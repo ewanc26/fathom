@@ -197,13 +197,15 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
                         )
                         Tab.Profile -> ProfileScreen(
                             dashboard = dashboard,
+                            reading = state.loading,
+                            onReadEverything = viewModel::refreshEverything,
                             onDisconnect = viewModel::disconnect,
                         )
                     }
                 }
             }
 
-            if (state.loading && dashboard != null && !state.readingStatusDismissed) {
+            if (state.readingHistory && dashboard != null && !state.readingStatusDismissed) {
                 // A long read needs a quantity, not just motion: "reading" with
                 // no count looks the same at four hundred plays as at twenty
                 // thousand, and the difference is six seconds versus two

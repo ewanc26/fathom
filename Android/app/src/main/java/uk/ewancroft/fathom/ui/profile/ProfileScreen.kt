@@ -32,7 +32,12 @@ import uk.ewancroft.fathom.ui.components.Panel
  * comparing Fathom's total against teal.fm's needs to know both are counted.
  */
 @Composable
-fun ProfileScreen(dashboard: Dashboard, onDisconnect: () -> Unit) {
+fun ProfileScreen(
+    dashboard: Dashboard,
+    reading: Boolean,
+    onReadEverything: () -> Unit,
+    onDisconnect: () -> Unit,
+) {
     val profile = dashboard.profile
     val name = profile?.nameOrNull()
         ?: dashboard.handle
@@ -130,14 +135,29 @@ fun ProfileScreen(dashboard: Dashboard, onDisconnect: () -> Unit) {
             }
         }
 
+        OutlinedButton(
+            onClick = onReadEverything,
+            enabled = !reading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Read everything")
+        }
+
+        Text(
+            text = "Refresh reads only new plays. Read everything re-reads the " +
+                "whole history to pick up edited or deleted records.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
         OutlinedButton(onClick = onDisconnect, modifier = Modifier.fillMaxWidth()) {
             Text("Disconnect")
         }
 
         Text(
             text = "Fathom keeps one copy of your public history on this device so " +
-                "the next launch opens instantly. Disconnecting deletes it along with " +
-                "the handle.",
+                "the next launch opens instantly. It is excluded from device " +
+                "backups. Disconnecting deletes it along with the handle.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

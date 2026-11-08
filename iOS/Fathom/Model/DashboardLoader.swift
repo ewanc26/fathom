@@ -12,10 +12,11 @@ struct StatusRefresh {
 ///
 /// teal.fm's hosted stats endpoints are not reliably deployed, and the plays
 /// are in the person's own repo anyway, so the figures are computed from
-/// records. Every page is read, because a total computed from the newest
-/// thousand plays is not a total. A page costs roughly half a second on a real
-/// PDS, so the newest page is published as soon as it arrives and the rest
-/// follow: a long history fills in rather than freezing the app.
+/// records. A first read fetches every page, because a total computed from the
+/// newest thousand plays is not a total. A page costs roughly half a second on
+/// a real PDS, so the newest page is published as soon as it arrives and the
+/// rest follow: a long history fills in rather than freezing the app. A later
+/// refresh stops at the first wholly known page instead.
 struct DashboardLoader {
     let client: TealClient
 
@@ -26,12 +27,21 @@ struct DashboardLoader {
     static let progressEveryPages = 10
 
     /// Reads [raw]'s history, calling [onProgress] with the profile and status
-    /// as soon as they arrive and then every `progressEveryPages` pages. Those
-    /// snapshots are marked `sampled`; the returned one is sampled only if the
-    /// read ended early.
+    /// as soon as they arrive and then every `progressEveryPages` pages. A
+    /// resumed read also publishes after its first page with new records,
+    /// since that read may stop on the next page. Those snapshots are marked
+    /// `sampled`; the returned one is sampled only if the read ended early.
+    ///
+    /// A complete [checkpoint] from the saved copy is a stopping point: the
+    /// read pages newest-first until a whole page is already known, then stops
+    /// and lets `PlayMerger` keep the newer records. [forceFull] ignores the
+    /// checkpoint for the explicit "read everything" action, which is how an
+    /// edited or deleted record is noticed.
     func load(
         identity raw: String,
         periodId: String,
+        checkpoint: ReadCheckpoint? = nil,
+        forceFull: Bool = false,
         onProgress: @escaping @MainActor (DashboardSnapshot) -> Void
     ) async throws -> DashboardSnapshot {
         let did = try await client.resolveIdentity(raw)
@@ -40,34 +50,54 @@ struct DashboardLoader {
 
         let profile = await loadProfile(pds: pds, did: did)
         let status = await loadStatus(pds: pds, did: did)
-
         let collections = FathomCore.shared.playCollections()
-        var plays: [Play] = []
-        var skipped = 0
-        var usedLegacy = false
+
+        let resume: ReadCheckpoint? = {
+            guard !forceFull,
+                  let checkpoint,
+                  checkpoint.did == did,
+                  FathomCore.shared.canResume(
+                    plays: checkpoint.plays,
+                    complete: checkpoint.complete
+                  ) else { return nil }
+            return checkpoint
+        }()
+        let merger = PlayMerger(known: resume?.plays ?? [])
+        var skipped = Int(resume?.skipped ?? 0)
+        var usedLegacy = resume?.legacy ?? false
         var complete = true
+        var readFailure: String? = nil
         var pages = 0
 
         // The account and what it is playing are known before a play is read,
-        // so they go on screen first.
-        await onProgress(
-            snapshot(
-                did: did,
-                handle: handle,
-                profile: profile,
-                status: status,
-                plays: plays,
-                periodId: periodId,
-                sampled: true,
-                skipped: skipped,
-                legacy: usedLegacy
+        // so they go on screen first. A resumed read already has a full saved
+        // picture; publishing its seed would flash the reading bar for a
+        // refresh that may finish on the first page.
+        if resume == nil {
+            await onProgress(
+                snapshot(
+                    did: did,
+                    handle: handle,
+                    profile: profile,
+                    status: status,
+                    plays: merger.plays,
+                    periodId: periodId,
+                    sampled: true,
+                    skipped: skipped,
+                    legacy: usedLegacy,
+                    readFailure: readFailure,
+                    pds: pds
+                )
             )
-        )
+        }
 
         for collection in collections {
             var cursor: String?
             while true {
-                if plays.count >= Self.playCeiling {
+                // A resumed cache may already sit at the guard. It is bounded,
+                // and the first wholly-known page is the stop; a full read is
+                // still stopped at exactly the same ceiling as before.
+                if resume == nil && Int(merger.size) >= Self.playCeiling {
                     complete = false
                     break
                 }
@@ -95,41 +125,74 @@ struct DashboardLoader {
                 } catch {
                     // Keep what was read, but stop claiming it is the lot.
                     complete = false
+                    if readFailure == nil {
+                        readFailure = (error as? FathomError)?.message
+                            ?? "The read stopped early."
+                    }
                     break
                 }
 
                 let page = FathomCore.shared.playsPage(json: json)
                 guard page.parsed else {
                     complete = false
+                    readFailure = "A page of plays could not be read."
                     break
                 }
                 if collection == collections.last, !page.plays.isEmpty {
                     usedLegacy = true
                 }
                 skipped += Int(page.skipped)
-                plays.append(contentsOf: page.plays)
+                let merge = merger.addPage(page: page.plays)
+                // A malformed sibling is not a known record. The page cannot
+                // prove where the saved tail starts, so keep reading.
+                let pageIsKnown = merge.pageWasFullyKnown && page.skipped == 0
 
                 pages += 1
-                if pages % Self.progressEveryPages == 0 {
+                if resume != nil {
+                    if !pageIsKnown &&
+                        (pages == 1 || pages % Self.progressEveryPages == 0) {
+                        await onProgress(
+                            snapshot(
+                                did: did,
+                                handle: handle,
+                                profile: profile,
+                                status: status,
+                                plays: merger.plays,
+                                periodId: periodId,
+                                sampled: true,
+                                skipped: skipped,
+                                legacy: usedLegacy,
+                                readFailure: readFailure,
+                                pds: pds
+                            )
+                        )
+                    }
+                } else if pages % Self.progressEveryPages == 0 {
                     await onProgress(
                         snapshot(
                             did: did,
                             handle: handle,
                             profile: profile,
                             status: status,
-                            plays: plays,
+                            plays: merger.plays,
                             periodId: periodId,
                             sampled: true,
                             skipped: skipped,
-                            legacy: usedLegacy
+                            legacy: usedLegacy,
+                            readFailure: readFailure,
+                            pds: pds
                         )
                     )
                 }
+                if resume != nil && pageIsKnown { break }
 
                 guard let next = page.cursor, next != cursor else {
                     // A server that repeats a cursor would otherwise page
                     // until the guard stopped it.
-                    if page.cursor != nil { complete = false }
+                    if page.cursor != nil {
+                        complete = false
+                        readFailure = "The data server did not advance the page cursor."
+                    }
                     break
                 }
                 cursor = next
@@ -141,11 +204,13 @@ struct DashboardLoader {
             handle: handle,
             profile: profile,
             status: status,
-            plays: plays,
+            plays: merger.plays,
             periodId: periodId,
             sampled: !complete,
             skipped: skipped,
-            legacy: usedLegacy
+            legacy: usedLegacy,
+            readFailure: readFailure,
+            pds: pds
         )
     }
 
@@ -164,7 +229,9 @@ struct DashboardLoader {
             periodId: periodId,
             sampled: snapshot.sampled,
             skipped: snapshot.skipped,
-            legacy: snapshot.usedLegacyNamespace
+            legacy: snapshot.usedLegacyNamespace,
+            readFailure: snapshot.readFailure,
+            pds: snapshot.pds
         )
     }
 
@@ -178,11 +245,13 @@ struct DashboardLoader {
             handle: cached.handle,
             profile: cached.profile,
             status: cached.status,
-            plays: cached.plays,
+            plays: FathomCore.shared.distinctPlays(plays: cached.plays),
             periodId: periodId,
             sampled: cached.sampled,
             skipped: Int(cached.skipped),
-            legacy: cached.legacy
+            legacy: cached.legacy,
+            readFailure: nil,
+            pds: nil
         )
     }
 
@@ -196,7 +265,9 @@ struct DashboardLoader {
         periodId: String,
         sampled: Bool,
         skipped: Int,
-        legacy: Bool
+        legacy: Bool,
+        readFailure: String?,
+        pds: String?
     ) -> DashboardSnapshot {
         let ordered = plays.sorted { lhs, rhs in
             FathomCore.shared.instant(raw: lhs.playedTime)
@@ -221,7 +292,9 @@ struct DashboardLoader {
             stats: stats,
             sampled: sampled,
             skipped: skipped,
-            usedLegacyNamespace: legacy
+            usedLegacyNamespace: legacy,
+            readFailure: readFailure,
+            pds: pds
         )
     }
 

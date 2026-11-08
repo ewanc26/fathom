@@ -34,6 +34,23 @@ struct HistoryView: View {
         return buckets.keys.sorted(by: >).map { DaySection(id: $0, plays: buckets[$0] ?? []) }
     }
 
+    /// Why a read stopped before the end, beyond the generic partial label.
+    private var partialNotice: String {
+        guard let failure = model.snapshot?.readFailure else {
+            return "Only part of the history was read."
+        }
+        return "Only part of the history was read. \(failure)"
+    }
+
+    /// What History says about records it cannot place under a day.
+    private var undatedNotice: String? {
+        let count = Int(model.snapshot?.stats.undatedPlays ?? 0)
+        guard count > 0 else { return nil }
+        return count == 1
+            ? "1 play has no readable timestamp and is not shown."
+            : "\(count) plays have no readable timestamp and are not shown."
+    }
+
     var body: some View {
         Group {
             if model.snapshot == nil {
@@ -45,6 +62,15 @@ struct HistoryView: View {
             } else if sections.isEmpty {
                 if model.loading {
                     ProgressView("Reading history").padding(60)
+                } else if model.snapshot?.sampled == true {
+                    EmptyBlock(
+                        title: "No plays read",
+                        body: model.snapshot?.readFailure.map {
+                            "The history stopped before any plays could be read. \($0)"
+                        } ?? "Only part of the history was read, and no dated plays arrived."
+                    )
+                } else if let notice = undatedNotice {
+                    EmptyBlock(title: "No dated plays", body: notice)
                 } else {
                     EmptyBlock(
                         title: "No history",
@@ -92,11 +118,18 @@ struct HistoryView: View {
                 }
             }
 
+            if let notice = undatedNotice {
+                Text(notice)
+                    .font(.caption2)
+                    .foregroundStyle(FathomPalette.muted)
+                    .listRowBackground(FathomPalette.background)
+            }
+
             if model.snapshot?.sampled == true {
                 Text(
                     model.loading
                         ? "Still reading the rest of the history."
-                        : "Only part of the history was read."
+                        : partialNotice
                 )
                     .font(.caption2)
                     .foregroundStyle(FathomPalette.muted)
