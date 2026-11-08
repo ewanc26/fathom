@@ -18,6 +18,7 @@ struct StatsView: View {
                     extremesPanel(snapshot)
                     artistsPanel(snapshot)
                     releasesPanel(snapshot)
+                    tracksPanel(snapshot)
                     provenancePanel(snapshot)
                 }
                 .padding(16)
@@ -97,7 +98,13 @@ struct StatsView: View {
                     StatTile(
                         value: "\(busiest.playCount)",
                         label: "on the busiest day",
-                        detail: busiest.dayKey
+                        detail: FathomCore.shared.friendlyDay(
+                            epochDay: busiest.epochDay,
+                            todayEpochDay: FathomCore.shared.epochDay(
+                                epochSeconds: Int64(Date().timeIntervalSince1970),
+                                tzOffsetMinutes: Int32(TimeZone.current.secondsFromGMT() / 60)
+                            )
+                        )
                     )
                     StatTile(
                         value: FathomCore.shared.serviceLabel(host: stats.topService) ?? "—",
@@ -155,6 +162,29 @@ struct StatsView: View {
         }
     }
 
+    private func tracksPanel(_ snapshot: DashboardSnapshot) -> some View {
+        let tracks = snapshot.stats.topTracks
+        return Panel {
+            VStack(alignment: .leading, spacing: 4) {
+                SectionTitle(text: "Top tracks")
+                if tracks.isEmpty {
+                    EmptyBlock(title: "No tracks", body: "Nothing was played in this period.")
+                } else {
+                    let leader = max(tracks[0].playCount, 1)
+                    ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
+                        RankRow(
+                            rank: index + 1,
+                            title: track.name,
+                            subtitle: track.artist,
+                            playCount: track.playCount,
+                            fraction: Double(track.playCount) / Double(leader)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     private func provenancePanel(_ snapshot: DashboardSnapshot) -> some View {
         var notes = [FathomCore.shared.provenanceComputedLocally()]
         if snapshot.sampled {
@@ -166,6 +196,14 @@ struct StatsView: View {
         }
         if snapshot.skipped > 0 {
             notes.append("\(snapshot.skipped) unreadable records were skipped")
+        }
+        let undated = Int(snapshot.stats.undatedPlays)
+        if undated > 0 {
+            notes.append(
+                undated == 1
+                    ? "1 play has no readable timestamp and cannot be dated or drawn"
+                    : "\(undated) plays have no readable timestamp and cannot be dated or drawn"
+            )
         }
         if snapshot.usedLegacyNamespace {
             notes.append("Includes records from the older \(FathomCore.shared.legacyNamespace()) namespace")

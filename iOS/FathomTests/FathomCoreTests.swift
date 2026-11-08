@@ -77,6 +77,10 @@ final class FathomCoreTests: XCTestCase {
 
         XCTAssertEqual(stats.playCount, 1)
         XCTAssertEqual(stats.recentDays.count, 14)
+        XCTAssertEqual(stats.recentPlayCount, 1)
+        XCTAssertEqual(stats.topTracks.count, 1)
+        XCTAssertEqual(stats.topTracks.first?.name, "aneurysm")
+        XCTAssertEqual(stats.topTracks.first?.artist, "SXCREDMANE & ZMAJOR")
         XCTAssertEqual(stats.recentDays.last?.dayKey, "2026-11-07")
     }
 

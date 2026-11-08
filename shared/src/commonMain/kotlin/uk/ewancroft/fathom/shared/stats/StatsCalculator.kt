@@ -20,6 +20,21 @@ data class ReleaseTally(
     val seconds: Long,
 )
 
+/**
+ * One recording and how much of the window it accounts for.
+ *
+ * Identity is the MusicBrainz recording id when the record carries one, and
+ * the artist line plus title otherwise. [name] is the title; [artist] is the
+ * line to render under it.
+ */
+data class TrackTally(
+    val name: String,
+    val artist: String,
+    val mbid: String?,
+    val playCount: Int,
+    val seconds: Long,
+)
+
 /** One calendar day, always present in a contiguous series even when empty. */
 data class DayBucket(
     val dayKey: String,
@@ -49,10 +64,18 @@ data class ListeningStats(
     val uniqueReleases: Int = 0,
     val topArtists: List<ArtistTally> = emptyList(),
     val topReleases: List<ReleaseTally> = emptyList(),
+    val topTracks: List<TrackTally> = emptyList(),
     val recentDays: List<DayBucket> = emptyList(),
+    /** Plays in [recentDays] only, which is not the selected period's total. */
+    val recentPlayCount: Int = 0,
     val busiestDay: DayBucket? = null,
     val topService: String? = null,
     val currentStreakDays: Int = 0,
+    /**
+     * Plays in the read whose timestamp is missing or unreadable, for every
+     * period. All-time totals include them; a window cannot, so its totals
+     * leave them out while this count still reports them.
+     */
     val undatedPlays: Int = 0,
     val sampled: Boolean = false,
 ) {
@@ -82,7 +105,7 @@ object StatsCalculator {
 
         val artists = LinkedHashMap<String, Tally>()
         val releases = LinkedHashMap<String, Tally>()
-        val trackKeys = HashSet<String>()
+        val tracks = LinkedHashMap<String, Tally>()
         val dayCounts = HashMap<Long, Int>()
         val daySeconds = HashMap<Long, Long>()
         val services = HashMap<String, Int>()
@@ -95,17 +118,25 @@ object StatsCalculator {
             val playedAt = IsoInstant.parse(play.playedTime)
             val day = playedAt?.let { CivilDays.epochDay(it, tzOffsetMinutes) }
 
-            if (windowStart != null) {
-                // A play that cannot be dated cannot be placed in a window.
-                if (day == null || day < windowStart || day > today) continue
-            } else if (playedAt == null) {
+            if (playedAt == null) {
+                // The count is about the read, not the selected period:
+                // History must be able to say how many records it cannot
+                // place, even when a window excludes them from the totals.
                 undatedPlays++
+                if (windowStart != null) continue
+            } else if (windowStart != null && (day == null || day < windowStart || day > today)) {
+                continue
             }
 
             val seconds = (play.duration ?: 0).coerceAtLeast(0).toLong()
             playCount++
             listenedSeconds += seconds
-            trackKeys += play.trackKey()
+            tracks.tally(
+                key = play.trackKey(),
+                name = play.title(),
+                mbid = play.recordingMbId ?: play.trackMbId,
+                detail = play.artistLine(),
+            ).add(seconds)
 
             val names = play.artistNames()
             if (names.isEmpty()) {
@@ -145,6 +176,8 @@ object StatsCalculator {
             )
         }
 
+        val recentPlayCount = recentDays.sumOf { it.playCount }
+
         val busiestDay = dayCounts.keys
             .map { day ->
                 DayBucket(
@@ -166,7 +199,7 @@ object StatsCalculator {
             playCount = playCount,
             listenedSeconds = listenedSeconds,
             uniqueArtists = artists.size,
-            uniqueTracks = trackKeys.size,
+            uniqueTracks = tracks.size,
             uniqueReleases = releases.size,
             topArtists = artists.values
                 .sortedWith(compareByDescending<Tally> { it.playCount }.thenBy { it.name.lowercase() })
@@ -176,7 +209,16 @@ object StatsCalculator {
                 .sortedWith(compareByDescending<Tally> { it.playCount }.thenBy { it.name.lowercase() })
                 .take(leaders.coerceIn(0, 50))
                 .map { it.toRelease() },
+            topTracks = tracks.values
+                .sortedWith(
+                    compareByDescending<Tally> { it.playCount }
+                        .thenBy { it.name.lowercase() }
+                        .thenBy { it.detail.orEmpty().lowercase() },
+                )
+                .take(leaders.coerceIn(0, 50))
+                .map { it.toTrack() },
             recentDays = recentDays,
+            recentPlayCount = recentPlayCount,
             busiestDay = busiestDay,
             topService = topService,
             currentStreakDays = streak(today, dayCounts),
@@ -204,7 +246,7 @@ object StatsCalculator {
 
     private const val UNKNOWN_ARTIST_KEY = "\u0000unknown"
 
-    private class Tally(val name: String, val mbid: String?) {
+    private class Tally(val name: String, val mbid: String?, val detail: String? = null) {
         var playCount: Int = 0
             private set
         var seconds: Long = 0L
@@ -217,8 +259,13 @@ object StatsCalculator {
 
         fun toArtist() = ArtistTally(name, mbid, playCount, seconds)
         fun toRelease() = ReleaseTally(name, mbid, playCount, seconds)
+        fun toTrack() = TrackTally(name, detail.orEmpty(), mbid, playCount, seconds)
     }
 
-    private fun LinkedHashMap<String, Tally>.tally(key: String, name: String, mbid: String?): Tally =
-        getOrPut(key) { Tally(name, mbid?.takeIf { it.isNotBlank() }) }
+    private fun LinkedHashMap<String, Tally>.tally(
+        key: String,
+        name: String,
+        mbid: String?,
+        detail: String? = null,
+    ): Tally = getOrPut(key) { Tally(name, mbid?.takeIf { it.isNotBlank() }, detail) }
 }

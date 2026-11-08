@@ -52,6 +52,49 @@ class StatsCalculatorTest {
     }
 
     @Test
+    fun ranksTracksByPlaysAndKeepsTheArtistLine() {
+        val plays = listOf(
+            play("A", "X", "2026-11-07T09:00:00Z"),
+            play("A", "X", "2026-11-07T10:00:00Z"),
+            play("B", "Y", "2026-11-07T11:00:00Z"),
+        )
+        val stats = compute(plays, Period.SevenDays)
+
+        assertEquals(listOf("A", "B"), stats.topTracks.map { it.name })
+        assertEquals(2, stats.topTracks.first().playCount)
+        assertEquals("X", stats.topTracks.first().artist)
+        assertEquals(2, stats.uniqueTracks)
+    }
+
+    @Test
+    fun mergesTheSameRecordingEvenWhenItsTitleDiffers() {
+        // A reissue can write a different title for the same recording; the
+        // MusicBrainz id is what makes it one track.
+        val plays = listOf(
+            Play(
+                trackName = "Song",
+                artists = listOf(ArtistRef("Artist")),
+                recordingMbId = "mbid:1",
+                duration = 100,
+                playedTime = "2026-11-07T09:00:00Z",
+            ),
+            Play(
+                trackName = "Song (Remastered)",
+                artists = listOf(ArtistRef("Artist")),
+                recordingMbId = "mbid:1",
+                duration = 100,
+                playedTime = "2026-11-07T10:00:00Z",
+            ),
+        )
+        val stats = compute(plays, Period.SevenDays)
+
+        assertEquals(1, stats.uniqueTracks)
+        assertEquals(1, stats.topTracks.size)
+        assertEquals(2, stats.topTracks.first().playCount)
+        assertEquals("mbid:1", stats.topTracks.first().mbid)
+    }
+
+    @Test
     fun countsEachArtistOnACollaboration() {
         val plays = listOf(
             Play(
@@ -95,6 +138,9 @@ class StatsCalculatorTest {
         assertEquals(14, stats.recentDays.size)
         assertEquals("2026-11-07", stats.recentDays.last().dayKey)
         assertEquals(1, stats.recentDays.last().playCount)
+        // The chart has its own total, which is not the selected period's:
+        // the Now screen draws fourteen days whatever period Stats shows.
+        assertEquals(1, stats.recentPlayCount)
         assertEquals("2026-10-25", stats.recentDays.first().dayKey)
         assertEquals(0, stats.recentDays.first().playCount)
     }
@@ -121,8 +167,12 @@ class StatsCalculatorTest {
         )
         val allTime = compute(plays, Period.AllTime)
         assertEquals(1, allTime.undatedPlays)
-        // Undated plays cannot be placed in a window, so they are excluded there.
-        assertEquals(0, compute(plays, Period.SevenDays).undatedPlays)
+        // All-time totals include a play whose timestamp is missing.
+        assertEquals(2, allTime.playCount)
+        // The count is about the read, not the window: History still has to
+        // say that one record could not be placed anywhere.
+        assertEquals(1, compute(plays, Period.SevenDays).undatedPlays)
+        // ...but a window cannot total a play it cannot date.
         assertEquals(1, compute(plays, Period.SevenDays).playCount)
     }
 

@@ -88,10 +88,10 @@ fun NowScreen(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = if (dashboard.stats.hasData) {
-                        "${dashboard.stats.playCount} plays in ${periodWord(dashboard)}"
+                    text = if (dashboard.stats.recentPlayCount > 0) {
+                        "${dashboard.stats.recentPlayCount} plays in the last 14 days"
                     } else {
-                        "No plays in this period yet"
+                        "No plays in the last 14 days"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -237,6 +237,3 @@ private fun Chart(days: List<DayBucket>) {
         }
     }
 }
-
-private fun periodWord(dashboard: Dashboard): String =
-    if (dashboard.stats.playCount == 1) "1 play total" else "this period"

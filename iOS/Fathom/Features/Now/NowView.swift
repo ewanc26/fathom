@@ -65,7 +65,7 @@ struct NowView: View {
         Panel {
             VStack(alignment: .leading, spacing: 10) {
                 SectionTitle(text: "Last 14 days")
-                Text("\(snapshot.stats.playCount) plays in this period")
+                Text("\(snapshot.stats.recentPlayCount) plays in the last 14 days")
                     .font(.caption2)
                     .foregroundStyle(FathomPalette.muted)
                 DayChart(days: snapshot.stats.recentDays)
