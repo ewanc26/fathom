@@ -4,11 +4,30 @@
 // decoding come from :shared; nothing in this module should decide what a
 // figure means, only how it is drawn.
 
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+// The shared version source. iOS mirrors these values through
+// scripts/sync-version.py; Android reads them directly so it cannot drift.
+val versionPropertiesFile = rootProject.file("../version.properties")
+check(versionPropertiesFile.isFile) {
+    "Missing ${versionPropertiesFile.path}; run from a complete checkout."
+}
+val versionProperties = Properties().apply {
+    versionPropertiesFile.inputStream().use { load(it) }
+}
+val appVersionName = versionProperties.getProperty("versionName")
+    ?.takeIf { it.isNotBlank() }
+    ?: error("versionName is missing from ${versionPropertiesFile.path}")
+val appVersionCode = versionProperties.getProperty("versionCode")
+    ?.toIntOrNull()
+    ?.takeIf { it > 0 }
+    ?: error("versionCode must be a positive integer in ${versionPropertiesFile.path}")
 
 android {
     namespace = "uk.ewancroft.fathom"
@@ -18,8 +37,8 @@ android {
         applicationId = "uk.ewancroft.fathom"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     buildTypes {
