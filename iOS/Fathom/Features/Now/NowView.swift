@@ -120,12 +120,10 @@ private struct NowPlayingCard: View {
 
     private var status: TealStatus? { snapshot.status }
 
-    /// A status record still exists after it expires, and a tracker with
-    /// nothing to report writes one with an empty track, so both are checked.
+    /// The shared core owns both rules: the track must be named, and the
+    /// record must be inside its expiry (or time plus ten minutes).
     private var isLive: Bool {
-        guard let status, status.item?.hasTrack() == true else { return false }
-        let expiry = FathomCore.shared.instant(raw: status.expiry)
-        return expiry == Int64.min || now < expiry
+        status?.isLive(nowEpochSeconds: now) == true
     }
 
     var body: some View {

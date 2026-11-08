@@ -3,6 +3,7 @@ import FathomShared
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -35,7 +36,22 @@ struct DashboardView: View {
         }
         // One fetch feeds all four tabs; letting each tab load its own would
         // produce four different answers to the same question.
-        .task { await model.start() }
+        .task {
+            model.startStatusPolling()
+            await model.start()
+        }
+        // A status outlives its expiry. Stop asking while the app is away and
+        // ask again the moment it comes back.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                model.startStatusPolling()
+            } else {
+                model.stopStatusPolling()
+            }
+        }
+        .onDisappear {
+            model.stopStatusPolling()
+        }
         // A long read needs a quantity, not just motion: "reading" with no
         // count looks the same at four hundred plays as at twenty thousand,
         // and the difference is six seconds versus two minutes.

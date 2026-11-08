@@ -149,8 +149,7 @@ private fun NowPlayingCard(
     tzOffsetMinutes: Int,
 ) {
     val status: TealStatus? = dashboard.status
-    val live = status != null &&
-        status.isListening(nowEpochSeconds, IsoInstant.parse(status.expiry))
+    val live = status?.isLive(nowEpochSeconds) == true
     val item = status?.item
 
     Panel {

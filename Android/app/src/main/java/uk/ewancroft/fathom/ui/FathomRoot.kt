@@ -29,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import uk.ewancroft.fathom.FathomViewModel
@@ -85,6 +89,28 @@ private fun Dashboard(state: FathomViewModel.UiState, viewModel: FathomViewModel
     // screen agrees with every other.
     val now = remember(dashboard) { System.currentTimeMillis() / 1_000L }
     val tz = remember(dashboard) { FathomRepository.currentOffsetMinutes(now) }
+
+    // The status is the one thing on the dashboard that changes without a
+    // repo read. Poll it only while this screen is resumed: a background app
+    // has no reason to ask, and the next resume asks immediately.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> viewModel.startStatusPolling()
+                Lifecycle.Event.ON_PAUSE -> viewModel.stopStatusPolling()
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            viewModel.startStatusPolling()
+        }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            viewModel.stopStatusPolling()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
