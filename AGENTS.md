@@ -44,6 +44,8 @@ the account's own repo — is planned and tracked in the issue tracker.
     computed.
   - `time/` — RFC 3339 parsing and calendar arithmetic, with no platform types.
   - `format/` — durations, counts, relative times, service names.
+  - `search/` — the one folded, case- and diacritic-insensitive matcher used
+    by History on both platforms. UI filtering must not reimplement it.
   - `xrpc/` — collection constants, query encoding, blob URLs.
   - `auth/` — the scopes a future write would need. Unused today.
   - `FathomCore.kt` — the narrow Swift-facing facade.
@@ -53,7 +55,12 @@ the account's own repo — is planned and tracked in the issue tracker.
   - `ui/` — one folder per screen, plus `components/` for shared pieces.
 - `iOS/Fathom/`
   - `Networking/TealClient.swift`, `Model/DashboardLoader.swift`,
-    `Model/AppModel.swift`, `Features/` per screen, `Components/` shared.
+    `Model/AppModel.swift`, `Features/` per screen, `Components/` shared,
+    `Resources/` for the bundled licence.
+- `website/`
+  - Plain HTML and CSS served by GitHub Pages. `/privacy/` and `/terms/` are
+    linked from the client metadata, both stores and the About sections.
+    Claims here must describe the code, not an aspiration.
 
 ## Protocol notes that are easy to get wrong
 
@@ -151,8 +158,16 @@ re-read a minute while the dashboard is in the foreground and no history read
 is running. A complete saved history is a checkpoint for an incremental
 refresh; a partial one always forces a full read, and Profile's **Read
 everything** action forces one on demand. The handle and period stay in ordinary
-preferences and may be restored from a backup; the history never is.
-`website/client-metadata.json` records the scopes that a write would need.
+preferences and may be restored from a backup; the history never is.  `website/client-metadata.json` records the scopes that a write would need.
+
+History is searchable through `PlaySearchIndex`, and both apps group its
+results by local day. Undated plays are listed under **No date** rather than
+dropped. About reads the real build metadata, links the public site and shows
+the bundled AGPL text plus the shared third-party notices. The release
+workflow is tag-driven: `v<versionName>` checks `version.properties`, builds
+signed artifacts and publishes a GitHub Release; a manual dispatch builds
+without publishing. The `release` environment requires a reviewer and its
+signing secrets are still unset.
 
 ## Working rules
 

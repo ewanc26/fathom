@@ -47,8 +47,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: uk.ewancroft.fathom
         PRODUCT_NAME: Fathom
         TARGETED_DEVICE_FAMILY: "1"
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "8"
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "9"
         SWIFT_EMIT_LOC_STRINGS: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
@@ -56,8 +56,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: Fathom
-        CFBundleShortVersionString: "0.1.0"
-        CFBundleVersion: "8"
+        CFBundleShortVersionString: "0.2.0"
+        CFBundleVersion: "9"
         UILaunchScreen:
           UIColorName: LaunchBackground
           UIImageName: LaunchMark

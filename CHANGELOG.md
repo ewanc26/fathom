@@ -4,10 +4,36 @@ All notable changes to Fathom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 semantic versioning.
 
-## [Unreleased]
+## [0.2.0] - 2026-11-08
+
+0.2.0 is the first tagged release. It adds the About surface, History search
+and date navigation, the public website and a tag-driven release path. No
+signed store build has been published yet.
 
 ### Added
 
+- History search over track, artist and release, implemented once in the
+  shared core with case- and diacritic-insensitive matching. The same query
+  returns the same plays on iOS and Android, and search never reads the repo
+  again.
+- A month jump in History, built from the months the loaded plays actually
+  contain, and a match count that distinguishes “12 matches” from “no plays
+  match”.
+- Plays with no readable timestamp are listed under **No date** with their
+  count, instead of being left out of History after being counted in the
+  figures.
+- An About section on both platforms showing the version and build number from
+  the bundle, the source repository, the AGPL-3.0 licence, privacy and terms
+  links, copyright, and third-party notices. The full licence is bundled and
+  readable offline.
+- A public website in `website/`: landing page, privacy policy, terms of use,
+  the app icon and the client metadata. It is plain HTML and CSS with no
+  JavaScript, analytics or third-party requests, and is deployed by GitHub
+  Pages.
+- A tag-driven release path: `v<versionName>` builds the signed artifacts,
+  checks the tag against `version.properties`, and publishes the AAB, APK, IPA
+  and checksums on a GitHub Release. A manual dispatch builds artifacts
+  without publishing.
 - A native teal.fm dashboard for iOS and Android, with Now, Stats, History and
   Profile screens.
 - A bar-chart app icon on both platforms: default, dark and tinted
@@ -69,6 +95,12 @@ semantic versioning.
 
 ### Fixed
 
+- History no longer presents a wall of every play with no way to narrow it:
+  search and the month jump operate on the loaded records, and a blank query
+  returns the full history in its original order.
+- About reads `BuildConfig.VERSION_NAME`/`VERSION_CODE` on Android and the
+  bundle's `CFBundleShortVersionString`/`CFBundleVersion` on iOS, so the
+  version a tester sees is the build they installed rather than a literal.
 - The Now chart states its own fourteen-day total instead of borrowing the
   selected period's play count, which was a different number whenever Stats
   was not showing seven days.
@@ -99,6 +131,12 @@ semantic versioning.
 
 ### Security
 
+- The release workflow now runs on a tag and waits on a protected `release`
+  environment with a required reviewer. Signing secrets remain environment
+  secrets; nothing is committed, and a manual dispatch cannot publish.
+- The website has no cookies, analytics, advertising or third-party scripts;
+  its privacy policy states what the apps store locally and what the hosting
+  provider may log.
 - Release signing material is supplied only through environment variables or
   the gitignored `Android/keystore.properties`; certificates, profiles,
   keystores and passwords are excluded from version control and temporary CI

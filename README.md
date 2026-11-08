@@ -60,9 +60,9 @@ research behind reading the repo at all.
 | `Android/` | Android client (Kotlin, Compose, Material 3). Also the only Gradle root. |
 | `iOS/` | iOS client (SwiftUI), with a generated Xcode project. |
 | `lexicons/` | The `fm.teal.*` lexicons, vendored from [teal-fm/teal](https://github.com/teal-fm/teal) unmodified. |
-| `website/` | The OAuth client metadata Fathom would need if it ever writes. Unused today. |
+| `website/` | The public landing page, privacy policy, terms, client metadata and icon, served by GitHub Pages. |
 | `docs/` | Protocol research, architecture, the dashboard's design, and the release checklist. |
-| `.github/workflows/` | CI and the manual signed-artifact release workflow. |
+| `.github/workflows/` | CI, the Pages deployment and the tag-driven release workflow. |
 
 ## Features
 
@@ -76,9 +76,17 @@ research behind reading the repo at all.
   releases and tracks, each with a share of the leader.
 - **History** — every play read, grouped by the local day, with relative times
   and the length each record declared. Plays with no readable timestamp are
-  counted at the end rather than silently dropped.
+  listed under **No date** with their count, not silently dropped.
+- **History search** — case- and diacritic-insensitive search over track,
+  artist and release, folded once in the shared core. A blank query is the
+  full history; a match count distinguishes a query with no matches from an
+  account with no plays. A month menu jumps to the first play in any month the
+  results contain.
 - **Profile** — the teal.fm profile record, featured item, DID, and a plain
   statement of where the figures come from.
+- **About** — the version and build number from the actual bundle, the source
+  repository, the AGPL-3.0 text bundled for offline reading, third-party
+  notices, and links to the privacy policy and terms.
 - **Saved history** — a completed read is written to app-private storage, so a
   second launch draws the dashboard immediately and refreshes behind it. A
   complete saved copy is also the stopping point for an incremental read: only
@@ -183,8 +191,9 @@ them.
 
 - `shared/src/commonTest/` holds the real coverage: timestamp parsing and UTC
   bucketing, AT URI validation and record-level deduplication, incremental
-  stop/merge rules, query encoding, tolerant record decoding, and the
-  statistics themselves.
+  stop/merge rules, query encoding, tolerant record decoding, the statistics
+  themselves and History search. The search tests cover case, diacritics,
+  legacy artist names, releases and multi-word queries on both platforms.
 - `iOS/FathomTests/` covers the Swift-facing facade — that the bridge still
   carries a play, a page and a computed figure.
 - Android has a JVM suite for the transport's retry and error paths and the
@@ -208,12 +217,21 @@ Android reads that file directly; iOS is synchronised into `project.yml` and
 `Info.plist` by `python3 scripts/sync-version.py`, and CI rejects drift. Every
 uploaded build must raise `versionCode`, which is also the iOS build number.
 
-The manual [Release artifacts](.github/workflows/release.yml) workflow is set
-up to build a signed AAB and APK and a signed App Store Connect IPA from
-secrets in the protected `release` environment. It does not upload to either
-store yet. See [`docs/RELEASE.md`](docs/RELEASE.md) for signing secrets, local
-commands, the internal-testing checklist and rollback. No tester build has
-been published yet; #24 tracks the first one.
+The [Release](.github/workflows/release.yml) workflow is tag-driven. A push of
+`v0.2.0` checks that the tag matches `version.properties`, builds a signed AAB,
+APK and App Store Connect IPA from secrets in the protected `release`
+environment, and publishes them plus checksums on a GitHub Release. A manual
+dispatch builds the same artifacts without publishing. The environment now
+exists with a required reviewer, but its signing secrets are not configured, so
+no signed store build has been published; #24 tracks the first one. See
+[`docs/RELEASE.md`](docs/RELEASE.md) for signing secrets, local commands, the
+internal-testing checklist and rollback.
+
+The public site lives in [`website/`](website/).
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to
+GitHub Pages; the custom domain `fathom.ewancroft.uk` still needs its DNS
+record, as documented in [`website/README.md`](website/README.md). The site has
+no build step, no JavaScript, no analytics and no third-party requests.
 
 ## Limitations
 
