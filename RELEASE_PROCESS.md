@@ -1,26 +1,26 @@
 # Releasing Fathom
 
-Fathom follows Inkwell's release split: **the signed binaries are built on the
-publisher's machine, and GitHub Actions only records provenance for the exact
-bytes that were published.** No signing key, certificate, profile or password
-is stored in GitHub.
+Fathom follows Inkwell's split: **the binaries are built on the publisher's
+machine, and GitHub Actions only records provenance for the exact bytes that
+were published.** No signing key, password or profile is stored in GitHub.
+
+AltStore Classic and a self-hosted F-Droid repo are the first distribution
+routes. The App Store and Google Play are planned, not live.
 
 One version is one unified GitHub Release tagged `v<version>`, named
-`Fathom <version>`, with the platform artefacts that exist:
+`Fathom <version>`, with:
 
-- `Fathom-<version>.apk` for Android
-- `Fathom-<version>.ipa` for iOS
+- `Fathom-<version>.apk` — signed with the Fathom release key;
+- `Fathom-<version>.ipa` — unsigned, for AltStore Classic to re-sign.
 
-The Play upload bundle (`.aab`) is a store artefact, not a GitHub Release
-asset. The release workflow then attaches:
+The release workflow then attaches:
 
 - `sbom-android-v<version>.spdx.json`
 - `sbom-ios-v<version>.spdx.json`
 - `release-manifest-v<version>.json`
-- a build-provenance attestation for the manifest and SBOMs
+- a build-provenance attestation for the manifest and SBOMs.
 
-The existing `preview-0.2.0` debug APK predates this contract. It remains a
-development preview; it is not a `v*` release and is not store-ready.
+The old `preview-0.2.0` debug APK is a development preview, not a `v*` release.
 
 ## One version source
 
@@ -41,78 +41,112 @@ python3 scripts/sync-version.py
 - `python3 scripts/sync-version.py --check` runs in CI. Never edit the iOS
   version fields by hand.
 - `versionCode` is both the Android version code and the iOS build number.
-  Every uploaded build needs a higher number on both stores. Reusing one is
-  rejected by the stores and cannot be undone.
+  Raise it for every uploaded build; never reuse one.
 - The release tag is exactly `v` plus `versionName`. The provenance workflow
-  rejects tags that are not `vX.Y.Z`.
+  rejects anything else.
 
-## Publish locally
+## One-time signing setup
 
-The publisher is dry-run by default. Nothing is built, signed or uploaded
-until `--yes` is passed. Run it from `main` with the release commit already
-pushed to `origin/main`; it refuses a dirty tree or an unpushed commit.
+Run this once on the publisher's machine:
+
+```bash
+./scripts/setup-release-keys.sh
+```
+
+It creates two independent 4096-bit RSA keys and writes only gitignored files:
+
+| File | Purpose |
+|------|---------|
+| `Android/release-upload.jks` | Signs the APK users install |
+| `Android/keystore.properties` | Its local password configuration |
+| `Android/fdroid-repo/keystore.p12` | Signs the F-Droid repo index |
+| `Android/fdroid-repo/config.yml` | fdroidserver configuration and repo password |
+
+Back up all four in a password manager or encrypted archive. Losing the APK key
+prevents upgrades; losing the repo key prevents index updates. Neither can be
+recovered from GitHub. Do not reuse Inkwell's keys.
+
+The AltStore IPA needs no Apple Distribution certificate or provisioning
+profile because AltStore Classic signs it on the user's device.
+
+## Publish
+
+The publisher is dry-run by default. Run it from `main` with the release commit
+already pushed to `origin/main`; it refuses a dirty tree or an unpushed commit.
+Use `--push` so the F-Droid repo, AltStore source and website assets are pushed
+after publication.
 
 ```bash
 node tools/release/publish.mjs status
-node tools/release/publish.mjs android --yes --notes-file release-notes.md
-node tools/release/publish.mjs ios --ipa /path/to/Fathom-0.2.0-9.ipa --yes --notes-file release-notes.md
+node tools/release/publish.mjs android --yes --push --notes-file release-notes.md
+node tools/release/publish.mjs ios --yes --push --notes-file release-notes.md
 ```
 
-`status` is read-only and shows whether the APK and IPA for the source version
-are attached to the release.
+`status` shows the source version, GitHub Release assets, AltStore version and
+F-Droid version.
 
-When a release does not exist, the first publish creates it and the matching
+When the release does not exist, the first publish creates it and the matching
 tag from the pushed `main` HEAD. Later platform uploads attach to the same
-release. If `--notes-file` is omitted, the publisher drafts a starting point
-from commit subjects; that draft is not finished release copy. A notes file is
-only used when the release is created. Edit an existing release body with:
+release. A notes file is only used when the release is created; edit an existing
+release with:
 
 ```bash
 gh release edit v0.2.0 --notes-file release-notes.md
 ```
 
-`--skip-existing` makes a rerun a no-op when that exact platform asset is
-already attached.
+`--skip-existing` makes a rerun a no-op when that platform asset is already
+attached.
 
-### Signing material
+### Android and F-Droid
 
-Nothing under version control signs a release, and nothing in GitHub Actions
-does either. The old protected `release` environment and its secret names are
-no longer used and can be deleted.
-
-#### Android
-
-Set these four variables for the publisher, or use the gitignored
-`Android/keystore.properties` with `storeFile`, `storePassword`, `keyAlias`
-and `keyPassword`:
-
-```bash
-export FATHOM_KEYSTORE_FILE="$PWD/release-upload.jks"
-export FATHOM_KEYSTORE_PASSWORD='…'
-export FATHOM_KEY_ALIAS='…'
-export FATHOM_KEY_PASSWORD='…'
-```
-
-`tools/release/publish.mjs android` calls
-[`scripts/release-android.sh`](scripts/release-android.sh). That script runs
-the shared and Android tests, builds `bundleRelease` and `assembleRelease`,
-verifies the AAB with `jarsigner` and the APK with `apksigner`, and writes to
+[`scripts/release-android.sh`](scripts/release-android.sh) runs the shared and
+Android tests, builds `bundleRelease` and `assembleRelease`, verifies the AAB
+with `jarsigner` and the APK with `apksigner`, and writes to
 `build/release/android/`:
 
-- `Fathom-<version>-<build>.aab` for Play
-- `Fathom-<version>-<build>.apk`, copied to the release name
-  `Fathom-<version>.apk`
-- `SHA256SUMS` for the local files; the GitHub asset is the manifest, not this
-  file
+- `Fathom-<version>-<build>.aab` for Play, not a release asset;
+- `Fathom-<version>-<build>.apk`;
+- `SHA256SUMS` for local use.
 
-The publisher independently checks that the APK is not signed with the Android
-debug key before uploading it.
+The publisher independently rejects a debug-signed APK, then:
 
-#### iOS
+1. copies the APK to `Android/fdroid-repo/repo/Fathom-<version>.apk`;
+2. updates `CurrentVersion` and `CurrentVersionCode` in the metadata;
+3. runs `fdroid update --clean` in `Android/fdroid-repo/`;
+4. mirrors `repo/` to `website/fdroid/repo/`, excluding `repo/status`;
+5. uploads `Fathom-<version>.apk` to the GitHub Release;
+6. commits the metadata, repo and website mirror, then pushes with `--push`.
 
-Install the Apple Distribution certificate in the login keychain and the App
-Store provisioning profile in
-`~/Library/MobileDevice/Provisioning Profiles`, then export the IPA:
+The F-Droid install link includes the repo index fingerprint
+`DE922C5717CAB6C0A48AF84B5D0EBC72302308023DE7AC770BA68911F771BB29`. The app
+signing key is separate from the repo key; neither is committed.
+
+### iOS and AltStore Classic
+
+[`scripts/build-altstore-ipa.sh`](scripts/build-altstore-ipa.sh) builds the
+XCFramework, regenerates the Xcode project, archives with code signing disabled,
+packages `Payload/Fathom.app` into an IPA, and checks the bundle identifier and
+version. Output is
+`build/release/ios-altstore/Fathom-<version>-<build>.ipa`.
+
+The publisher then:
+
+1. verifies the IPA reports the version and build from `version.properties`;
+2. copies it to `website/altstore/Fathom-<version>.ipa`;
+3. prepends a `versions` entry to `iOS/altstore/source.json` with the date,
+   size, SHA-256, build number, minimum iOS version and download URL;
+4. updates the app-level latest fields and mirrors the file byte-for-byte to
+   `website/altstore/source.json`;
+5. validates the source and mirror with
+   [`tools/release/validate-altstore.mjs`](tools/release/validate-altstore.mjs);
+6. uploads `Fathom-<version>.ipa` to the GitHub Release;
+7. commits the source and website assets, then pushes with `--push`.
+
+This is an **AltStore Classic** source. Do not add `marketplaceID`, an ADP
+manifest or a notarisation step. The hosted IPA is intentionally unsigned;
+AltStore Classic re-signs it with the user's Apple ID.
+
+An App Store export still needs the Apple Distribution certificate and profile:
 
 ```bash
 export IOS_TEAM_ID='…'
@@ -120,87 +154,81 @@ export IOS_PROVISIONING_PROFILE_SPECIFIER='Fathom App Store'
 ./scripts/release-ios.sh
 ```
 
-The script rebuilds the XCFramework, regenerates the Xcode project, archives
-with manual signing, exports an App Store Connect IPA and checks that the
-IPA's `CFBundleShortVersionString` and `CFBundleVersion` match
-`version.properties`. Output is `build/release/ios/Fathom-<version>-<build>.ipa`
-plus `SHA256SUMS`.
+Keep that path separate from the AltStore source.
 
-Pass that IPA to `publish.mjs ios`. The publisher verifies its embedded
-version and build number, copies it to `Fathom-<version>.ipa`, and uploads it.
-Xcode archiving needs an interactive keychain, so the publisher deliberately
-does not build the IPA itself.
+## Custom domain
+
+The site currently uses `https://ewanc26.github.io/fathom`. When
+`fathom.ewancroft.uk` resolves:
+
+```bash
+export FATHOM_SITE_BASE='https://fathom.ewancroft.uk'
+```
+
+Regenerate the AltStore source and F-Droid index with the publisher, and update
+the links in `website/index.html` and `website/README.md`. Do not change only the
+mirror: the index advertises its own repository address.
 
 ## Provenance in CI
 
 [`.github/workflows/release.yml`](.github/workflows/release.yml) is named
 **Release provenance**. It does **not** build, sign or publish an APK/IPA. It
-runs on:
-
-- a `v*` tag push
-- a GitHub Release being published
-- manual dispatch with a published tag input
+runs on a `v*` tag push, a published release, or manual dispatch with a
+published tag.
 
 It checks out the tag, generates an Android dependency SBOM with
-`anchore/sbom-action`, generates the iOS SBOM, downloads the **exact** APK/IPA
+`anchore/sbom-action`, generates the iOS SBOM, downloads the exact APK/IPA
 already attached to the release, hashes them, writes the release manifest,
 attests the manifest and SBOMs, and uploads those three files.
-
-The iOS target has no Swift Package Manager dependencies; its SBOM records that
-explicitly. The shared Kotlin framework's Gradle dependencies are covered by
-the Android SBOM.
 
 The workflow refuses to run until the release exists and has at least one
 binary. If a platform is added after the first publish, the publisher queues a
 fresh provenance run once both assets are present; you can also run
 **Actions → Release provenance → Run workflow** with the tag.
 
-### Why the binaries are not attested
-
-The APK and IPA are assembled and signed outside Actions. Attesting a CI
-rebuild would describe different bytes from the ones users download. Instead,
-the manifest records the SHA-256 of the exact published assets, and the
-workflow attests the manifest and SBOMs it genuinely produced. The manifest's
-`provenance.binariesBuiltInActions` field is `false`.
-
 ### Verify a release
 
 ```bash
-# 1. Download the manifest and SBOMs, then verify their attestation.
 gh release download vX.Y.Z --repo ewanc26/fathom \
   --pattern "release-manifest-*.json" --pattern "sbom-*.spdx.json"
 gh attestation verify release-manifest-vX.Y.Z.json --owner ewanc26
 gh attestation verify sbom-android-vX.Y.Z.spdx.json --owner ewanc26
 gh attestation verify sbom-ios-vX.Y.Z.spdx.json --owner ewanc26
 
-# 2. Confirm the binary you downloaded matches the hash in the manifest.
 shasum -a 256 Fathom-X.Y.Z.apk
 shasum -a 256 Fathom-X.Y.Z.ipa
 ```
 
-Do not run `gh attestation verify` against the APK or IPA themselves: they
-were not built in Actions and have no matching attestation. The manifest's
-`.artifacts.apk.sha256` and `.artifacts.ipa.sha256` are the link between the
-attested document and the binary.
+Do not run `gh attestation verify` against the APK or IPA themselves: they were
+not built in Actions. The manifest's `.artifacts.*.sha256` values link the
+attested document to the binaries.
 
 ## Store handoff
 
-The publisher stops at the GitHub Release. Store uploads remain manual.
+### AltStore Classic
+
+The source is live at
+`https://ewanc26.github.io/fathom/altstore/source.json`. Add it in AltStore
+Classic with **Sources → +**. The hosted IPA is re-signed by AltStore, so the
+installed signature is not the hosted file's signature.
+
+### F-Droid
+
+The repo is live at `https://ewanc26.github.io/fathom/fdroid/repo`. Add it by
+link or QR code in F-Droid; the fingerprint is in the website install link.
 
 ### Play internal testing
 
 1. Open Play Console → Fathom → Testing → Internal testing.
-2. Create a release and upload the `.aab` from
-   `build/release/android/`.
-3. Add the internal tester list, roll out, and open the opt-in link on a
-   tester's device.
+2. Upload the `.aab` from `build/release/android/`.
+3. Add the internal tester list, roll out, and open the opt-in link.
 4. Check that the release build and the debug build coexist; the debug
    application ID ends in `.debug`.
 
 ### TestFlight internal testing
 
-App Store Connect needs the app record, a privacy policy URL and the internal
-tester group before the first upload. Upload with:
+App Store Connect needs the app record, a privacy policy URL and an internal
+tester group. Upload the App Store export with:
 
 ```bash
 xcrun altool --upload-app \
@@ -210,9 +238,7 @@ xcrun altool --upload-app \
   --apiIssuer "$ASC_ISSUER_ID"
 ```
 
-Alternatively, open the IPA in Transporter. Wait for processing in App Store
-Connect, add it to the internal tester group, and verify the TestFlight build
-number matches `version.properties`.
+Alternatively, open the IPA in Transporter.
 
 ## Release checklist
 
@@ -220,58 +246,49 @@ number matches `version.properties`.
       `versionCode` increases for every uploaded build.
 - [ ] Edit `version.properties`, run `python3 scripts/sync-version.py`, and
       commit the generated `iOS/project.yml` and `iOS/Info.plist` changes.
-- [ ] Update `CHANGELOG.md` and prepare the release notes.
+- [ ] Update `CHANGELOG.md` and prepare `release-notes.md`.
 - [ ] Confirm `python3 scripts/sync-version.py --check` passes.
-- [ ] Run shared tests, Android tests and build, and the iOS `FathomTests`.
-- [ ] Export the signed IPA and build the signed APK locally. Confirm
-      `apksigner` shows the upload key, not the debug key.
-- [ ] Smoke-test on a real account: enter a handle, check Now, Stats,
-      History and Profile; search History and jump to a month; open About and
-      confirm the version; refresh once; run **Read everything**; disconnect
-      and confirm the saved history is gone.
-- [ ] Run `node tools/release/publish.mjs android --yes --notes-file <file>`
-      and `node tools/release/publish.mjs ios --ipa <file> --yes`.
+- [ ] Run the shared tests, Android tests and iOS `FathomTests`.
+- [ ] Smoke-test on a real account: Now, Stats, History, search, month jump,
+      About version, refresh, read everything, disconnect and confirm the saved
+      history is gone. A physical device is still outstanding for 0.2.0.
+- [ ] Run the Android publisher with `--yes --push`.
+- [ ] Run the iOS publisher with `--yes --push`.
+- [ ] Confirm the F-Droid repo includes the APK and the AltStore source's
+      `versions[0]` matches `version.properties`.
 - [ ] Wait for **Release provenance** and confirm the manifest and both SBOMs
       are attached.
-- [ ] Upload the AAB to Play internal testing and the IPA to TestFlight.
-- [ ] Verify both stores show the same version and build number, and that
-      About shows the same build.
-- [ ] Update the install links on the website once signed builds exist.
-- [ ] Record the commit, artifact hashes and tester links in the release notes.
+- [ ] Verify the install links on the live Pages site.
+- [ ] Upload the AAB to Play and the App Store IPA to TestFlight when those
+      records exist.
 
 ## Rollback
 
-There is no downgrade path on either store; roll back by publishing a new,
+There is no downgrade path in either channel; roll back by publishing a new,
 higher build.
 
-- **Play:** halt the internal rollout. Existing testers keep the last build
-  they installed. Fix the problem, raise `versionCode`, rebuild and upload a
-  new AAB. Never reuse a version code.
-- **TestFlight:** expire the bad build or remove it from the tester group.
-  Raise the build number, upload a replacement and add it to the group. Apple
-  does not accept a reused build number.
+- **AltStore:** publish a new IPA with a higher build number. Users can install
+  it over the old one. Editing `versions[0]` backwards is not a rollback.
+- **F-Droid:** publish a new APK with a higher `versionCode`. Do not replace an
+  APK under the same version code; F-Droid clients cache signatures and
+  indexes.
 - **Bad artifact, not bad code:** rebuild from the same commit with a higher
-  `versionCode`; do not overwrite a downloaded artifact or a store upload.
-- **Bad commit:** revert it in a new commit, raise `versionCode` again and
-  rebuild. Do not move or reuse a release tag.
-- **Bad release notes:** edit the GitHub Release; provenance does not need to
-  be rerun unless the binaries or SBOMs changed.
-- **Signing key exposed:** stop, revoke the certificate or request an upload
-  key reset, replace the local key, and rebuild. Both are store-level
-  operations with waiting periods.
+  `versionCode`; do not overwrite a downloaded artifact.
+- **Bad commit:** revert it, raise `versionCode`, rebuild. Do not move or reuse
+  a release tag.
+- **Bad release notes:** edit the GitHub Release; provenance does not need to be
+  rerun unless the binaries or SBOMs changed.
+- **Signing key exposed:** stop publishing. Replace the APK key with a new
+  package identity or coordinate an upgrade path; replace the F-Droid repo key
+  with a new repo URL and ask users to re-add it. Both are disruptive and have
+  no remote recovery.
 
 ## Known gaps
 
-- The local machine has no Apple Distribution certificate or App Store
-  provisioning profile, and no Android upload keystore. No signed `v0.2.0`
-  release has been published; only the debug preview exists.
-- The Play Console app and internal-testing track, and the App Store Connect
-  app record and internal tester group, still have to exist.
-- Store listing copy, support URL and screenshots from
-  `docs/images/screens/`.
-- Automated Play/TestFlight uploads. The publisher stops at signed local
-  artifacts and a GitHub Release; store uploads are manual until the first
-  internal build is proven.
-- The website's custom-domain DNS (`fathom.ewancroft.uk`) is documented in
-  `website/README.md`; the Pages workflow publishes whether or not the CNAME
-  has resolved yet.
+- No App Store or Google Play listing. Their app records, Apple Distribution
+  certificate/profile and Play upload key are separate work.
+- No physical-device smoke test has been done; 0.2.0 is emulator and simulator
+  verified.
+- The custom domain `fathom.ewancroft.uk` has no DNS record yet, so the live
+  channel URLs use the GitHub Pages origin.
+- Store uploads are manual.

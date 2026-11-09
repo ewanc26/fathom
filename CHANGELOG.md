@@ -6,13 +6,20 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- AltStore Classic and self-hosted F-Droid distribution. The publisher now
+  builds an unsigned IPA for AltStore, regenerates and mirrors the signed
+  F-Droid repo, updates both channel files, and pushes the website assets with
+  the GitHub Release.
+
 ### Changed
 
 - Releases now follow Inkwell's split: `tools/release/publish.mjs` builds and
-  signs the Android APK locally, accepts an exported iOS IPA, and creates one
-  unified `v<version>` GitHub Release. CI only adds SPDX SBOMs, a release
-  manifest and build-provenance attestations, so signing keys never enter
-  Actions.
+  signs the Android APK locally, builds the AltStore IPA, updates the
+  self-hosted F-Droid repo, and creates one unified `v<version>` GitHub Release.
+  CI only adds SPDX SBOMs, a release manifest and build-provenance
+  attestations, so signing keys never enter Actions.
 - GitHub release assets are now `Fathom-<version>.apk` and
   `Fathom-<version>.ipa`; the Play `.aab` stays a local store upload rather
   than a release asset. The attested release manifest is the published
@@ -23,8 +30,9 @@ semantic versioning.
 ## [0.2.0] - 2026-11-08
 
 0.2.0 is the first tagged release. It adds the About surface, History search
-and date navigation, the public website and a tag-driven release path. No
-signed store build has been published yet.
+and date navigation, the public website and a tag-driven release path. The
+first distribution channels are AltStore Classic and a self-hosted F-Droid
+repo; there is no App Store or Google Play listing.
 
 ### Added
 

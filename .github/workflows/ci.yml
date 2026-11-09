@@ -75,9 +75,12 @@ jobs:
       - name: Check release tooling
         run: |
           bash -n scripts/release-android.sh scripts/release-ios.sh
+          bash -n scripts/build-altstore-ipa.sh scripts/setup-release-keys.sh
           node --check tools/release/publish.mjs
           node --check tools/release/build-release-manifest.mjs
           node --check tools/release/generate-ios-sbom.mjs
+          node --check tools/release/validate-altstore.mjs
+          node tools/release/validate-altstore.mjs --allow-empty
 
   ios:
     name: iOS unit tests

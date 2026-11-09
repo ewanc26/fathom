@@ -16,6 +16,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# The Gradle build also reads Android/keystore.properties. Mirror it into the
+# environment for the preflight checks below, without printing any value.
+KEYSTORE_PROPERTIES="$ROOT/Android/keystore.properties"
+if [[ -f "$KEYSTORE_PROPERTIES" ]]; then
+    if [[ -z "${FATHOM_KEYSTORE_FILE:-}" ]]; then
+        store_file="$(sed -n 's/^storeFile=//p' "$KEYSTORE_PROPERTIES" | head -n 1)"
+        if [[ -n "$store_file" && "$store_file" != /* ]]; then
+            store_file="$ROOT/Android/$store_file"
+        fi
+        export FATHOM_KEYSTORE_FILE="$store_file"
+    fi
+    export FATHOM_KEYSTORE_PASSWORD="${FATHOM_KEYSTORE_PASSWORD:-$(sed -n 's/^storePassword=//p' "$KEYSTORE_PROPERTIES" | head -n 1)}"
+    export FATHOM_KEY_ALIAS="${FATHOM_KEY_ALIAS:-$(sed -n 's/^keyAlias=//p' "$KEYSTORE_PROPERTIES" | head -n 1)}"
+    export FATHOM_KEY_PASSWORD="${FATHOM_KEY_PASSWORD:-$(sed -n 's/^keyPassword=//p' "$KEYSTORE_PROPERTIES" | head -n 1)}"
+fi
+
 for name in FATHOM_KEYSTORE_FILE FATHOM_KEYSTORE_PASSWORD FATHOM_KEY_ALIAS FATHOM_KEY_PASSWORD; do
     if [[ -z "${!name:-}" ]]; then
         printf 'error: %s is not set\n' "$name" >&2

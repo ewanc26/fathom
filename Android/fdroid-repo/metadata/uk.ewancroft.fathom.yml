@@ -1,0 +1,38 @@
+Categories:
+  - Internet
+  - Multimedia
+License: AGPL-3.0-only
+AuthorName: Ewan Croft
+AuthorEmail: contact@ewancroft.uk
+WebSite: https://ewanc26.github.io/fathom/
+SourceCode: https://github.com/ewanc26/fathom
+IssueTracker: https://github.com/ewanc26/fathom/issues
+Changelog: https://github.com/ewanc26/fathom/releases
+
+Name: Fathom
+Summary: Read-only teal.fm listening dashboard
+Description: |-
+  Fathom is a native dashboard for the plays already in your AT Protocol
+  repository. It shows what is playing now, the last seven or thirty days,
+  all-time totals, top artists, releases and tracks, and the full history
+  grouped by the local day.
+
+  It is read-only. Fathom has no account, password or token. It resolves your
+  handle, finds your Personal Data Server and reads the public teal.fm records
+  directly. There is no Fathom backend in the middle. The figures are computed
+  on the device by a shared Kotlin core.
+
+  A read that ends early is labelled partial rather than presented as complete.
+  The saved history is app-private, excluded from Android backup and device
+  transfer, and contains only public records.
+
+  Fathom is not affiliated with teal.fm or Bluesky.
+
+RepoType: git
+Repo: https://github.com/ewanc26/fathom
+
+CurrentVersion: '0.2.0'
+CurrentVersionCode: 9
+
+AutoUpdateMode: None
+UpdateCheckMode: None

@@ -10,19 +10,22 @@
 //     Read-only. Shows whether the APK/IPA for the source version are on
 //     the GitHub Release.
 //
-//   node tools/release/publish.mjs android [--yes] [--notes-file <path>]
-//     Builds a signed release APK through scripts/release-android.sh,
-//     verifies it is not debug-signed, and publishes it as
-//     Fathom-<version>.apk.
+//   node tools/release/publish.mjs android [--yes] [--push] [--notes-file <path>]
+//     Builds a signed release APK, publishes it to the self-hosted F-Droid
+//     repo (metadata, signed index and website mirror), and attaches it to
+//     the GitHub Release as Fathom-<version>.apk.
 //
-//   node tools/release/publish.mjs ios --ipa <path> [--yes] [--notes-file <path>]
-//     Publishes an already-exported App Store Connect IPA as
-//     Fathom-<version>.ipa. Xcode archiving needs an interactive keychain,
-//     so this command deliberately does not build the IPA itself.
+//   node tools/release/publish.mjs ios [--ipa <path>] [--yes] [--push]
+//     Builds an unsigned AltStore Classic IPA when --ipa is omitted, publishes
+//     it to the AltStore source and website, and attaches it to the GitHub
+//     Release as Fathom-<version>.ipa. --ipa can supply an already-built
+//     unsigned AltStore IPA; App Store exports use a separate handoff.
 //
 // Flags:
 //   --yes             Actually build/sign/publish. Without it the command is
 //                     a dry run and changes nothing.
+//   --push            Push the channel commit to origin/main after publishing.
+//                     Without it the channel files are committed locally only.
 //   --notes-file      Markdown for a newly created release. Without it the
 //                     publisher drafts a starting point from commit subjects.
 //   --skip-existing   Succeed without doing anything when this exact asset is
@@ -38,6 +41,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { execFileSync, execSync } from "node:child_process";
@@ -47,6 +51,13 @@ import path from "node:path";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const repo = "ewanc26/fathom";
+const SITE_BASE = (process.env.FATHOM_SITE_BASE ?? "https://ewanc26.github.io/fathom").replace(
+  /\/+$/,
+  "",
+);
+const FDROID_DIR = path.join(root, "Android", "fdroid-repo");
+const ALTSTORE_DIR = path.join(root, "iOS", "altstore");
+const WEBSITE_ALTSTORE = path.join(root, "website", "altstore");
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -57,6 +68,7 @@ const option = (name) => {
 };
 
 const YES = flag("yes");
+const PUSH = flag("push");
 const SKIP_EXISTING = flag("skip-existing");
 
 if (YES && process.env.CI) {
@@ -86,6 +98,24 @@ function quiet(cmd) {
     }).trim();
   } catch {
     return null;
+  }
+}
+
+function commitAndMaybePush(paths, message) {
+  const status = execFileSync("git", ["status", "--porcelain", "--", ...paths], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  if (!status) {
+    console.log(`No channel changes to commit for ${message}.`);
+    return;
+  }
+  run("git", ["add", "--", ...paths]);
+  run("git", ["commit", "-m", message]);
+  if (PUSH) {
+    run("git", ["push", "origin", "main"]);
+  } else {
+    console.log("Channel changes committed locally; pass --push to publish the site update.");
   }
 }
 
@@ -135,6 +165,25 @@ function ghRelease(tag) {
 
 function assetsFor(tag) {
   return new Set((ghRelease(tag)?.assets ?? []).map((asset) => asset.name));
+}
+
+function altstoreLatest() {
+  const file = path.join(ALTSTORE_DIR, "source.json");
+  if (!existsSync(file)) return null;
+  try {
+    return JSON.parse(readFileSync(file, "utf8")).apps?.[0]?.versions?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function fdroidLatest() {
+  const file = path.join(FDROID_DIR, "metadata", "uk.ewancroft.fathom.yml");
+  if (!existsSync(file)) return null;
+  const yaml = readFileSync(file, "utf8");
+  const version = yaml.match(/CurrentVersion:\s*'?([^'\n]+)'?/);
+  const code = yaml.match(/CurrentVersionCode:\s*(\d+)/);
+  return version && code ? { name: version[1].trim(), code: Number(code[1]) } : null;
 }
 
 function hasAsset(tag, name) {
@@ -324,17 +373,29 @@ function status() {
     ["iOS IPA", `Fathom-${name}.ipa`],
   ];
 
+  const altstore = altstoreLatest();
+  const fdroid = fdroidLatest();
+
   console.log(`Source version: ${name} (${code})`);
   console.log(`Release:        ${release ? release.url : `${tag} (missing)`}`);
   for (const [label, asset] of expected) {
     console.log(`  ${names.has(asset) ? "✓" : "✗"} ${label.padEnd(12)} ${asset}`);
   }
+  console.log("Channels:");
+  console.log(
+    `  ${altstore?.version === name && altstore?.buildVersion === String(code) ? "✓" : "✗"} AltStore    ` +
+      (altstore ? `${altstore.version} (${altstore.buildVersion})` : "unpublished"),
+  );
+  console.log(
+    `  ${fdroid?.name === name && fdroid?.code === code ? "✓" : "✗"} F-Droid     ` +
+      (fdroid ? `${fdroid.name} (${fdroid.code})` : "unpublished"),
+  );
   const complete = expected.every(([, asset]) => names.has(asset));
   console.log(
     complete
       ? "\nBoth platform assets are attached. The provenance workflow can attest the release."
-      : `\nRun \`node tools/release/publish.mjs android --yes\` and/or\n` +
-          "`node tools/release/publish.mjs ios --ipa <path> --yes` to fill the gaps.\n" +
+      : `\nRun \`node tools/release/publish.mjs android --yes --push\` and/or\n` +
+          "`node tools/release/publish.mjs ios --yes --push` to fill the gaps.\n" +
           "Signing material never enters GitHub Actions.",
   );
 }
@@ -359,8 +420,12 @@ function publishAndroid() {
     console.log("Would run:");
     console.log("  1. ./scripts/release-android.sh       (tests, AAB, signed APK)");
     console.log("  2. verify the APK is signed with the release key");
-    console.log(`  3. copy the APK to build/release/github/${assetName}`);
-    console.log(`  4. create/upload ${assetName} on GitHub Release ${tag}`);
+    console.log(`  3. copy the APK to Android/fdroid-repo/repo/${assetName}`);
+    console.log(`  4. set the metadata to ${name} (${code}) and run fdroid update --clean`);
+    console.log("  5. mirror Android/fdroid-repo/repo to website/fdroid/repo");
+    console.log(`  6. copy the APK to build/release/github/${assetName}`);
+    console.log(`  7. create/upload ${assetName} on GitHub Release ${tag}`);
+    console.log("  8. commit the channel files" + (PUSH ? " and push" : " (local only; pass --push)"));
     console.log("\nRe-run with --yes to actually publish.");
     return;
   }
@@ -378,9 +443,47 @@ function publishAndroid() {
   cpSync(built, asset);
   console.log(`SHA-256 ${assetName}: ${sha256File(asset)}`);
 
+  const configPath = path.join(FDROID_DIR, "config.yml");
+  if (!existsSync(configPath)) {
+    fail("Android/fdroid-repo/config.yml is missing. Run ./scripts/setup-release-keys.sh first.");
+  }
+  if (!quiet("command -v fdroid")) {
+    fail("fdroidserver is not installed. See Android/fdroid-repo/README.md.");
+  }
+
+  const repoDir = path.join(FDROID_DIR, "repo");
+  mkdirSync(repoDir, { recursive: true });
+  cpSync(built, path.join(repoDir, assetName));
+
+  const metadataPath = path.join(FDROID_DIR, "metadata", "uk.ewancroft.fathom.yml");
+  if (!existsSync(metadataPath)) fail(`Missing ${path.relative(root, metadataPath)}.`);
+  let metadata = readFileSync(metadataPath, "utf8");
+  metadata = metadata
+    .replace(/CurrentVersion:\s*'[^']*'/, `CurrentVersion: '${name}'`)
+    .replace(/CurrentVersionCode:\s*\d+/, `CurrentVersionCode: ${code}`);
+  writeFileSync(metadataPath, metadata);
+
+  run("fdroid", ["update", "--clean"], { cwd: FDROID_DIR });
+
+  const websiteRepo = path.join(root, "website", "fdroid", "repo");
+  rmSync(websiteRepo, { recursive: true, force: true });
+  mkdirSync(websiteRepo, { recursive: true });
+  cpSync(path.join(FDROID_DIR, "repo"), websiteRepo, {
+    recursive: true,
+    filter: (src) => !src.endsWith(`${path.sep}status`),
+  });
+
   publishAsset(tag, name, asset);
+  commitAndMaybePush(
+    [
+      "Android/fdroid-repo/metadata/uk.ewancroft.fathom.yml",
+      "Android/fdroid-repo/repo",
+      "website/fdroid/repo",
+    ],
+    `chore(android,fdroid): release ${name} (versionCode ${code})`,
+  );
   maybeQueueProvenance(tag, name);
-  console.log(`\n✓ Android ${name} published on ${tag}.`);
+  console.log(`\n✓ Android ${name} published: F-Droid repo updated, ${tag} released on GitHub.`);
 }
 
 // ── ios ───────────────────────────────────────────────────────────
@@ -390,16 +493,14 @@ function publishIos() {
   const tag = `v${name}`;
   const assetName = `Fathom-${name}.ipa`;
   const ipaArg = option("ipa");
-
-  if (!ipaArg) {
-    fail(
-      "iOS archiving needs an interactive Xcode keychain and is not built here.\n" +
-        "  Export an App Store Connect IPA with scripts/release-ios.sh, then re-run:\n" +
-        `  node tools/release/publish.mjs ios --ipa /path/to/Fathom-${name}-${code}.ipa --yes`,
-    );
-  }
-  const ipaPath = path.resolve(ipaArg);
-  if (!existsSync(ipaPath)) fail(`--ipa ${ipaArg} does not exist.`);
+  const builtIpa = path.join(
+    root,
+    "build",
+    "release",
+    "ios-altstore",
+    `Fathom-${name}-${code}.ipa`,
+  );
+  const ipaPath = ipaArg ? path.resolve(ipaArg) : builtIpa;
 
   if (hasAsset(tag, assetName)) {
     if (SKIP_EXISTING) {
@@ -412,14 +513,25 @@ function publishIos() {
   console.log(`Publishing iOS ${name} (build ${code})${YES ? "" : " [dry run]"}\n`);
   if (!YES) {
     console.log("Would run:");
-    console.log(`  1. verify ${path.basename(ipaPath)} reports ${name} (${code})`);
-    console.log(`  2. copy the IPA to build/release/github/${assetName}`);
-    console.log(`  3. create/upload ${assetName} on GitHub Release ${tag}`);
+    console.log(
+      ipaArg
+        ? `  1. verify ${path.basename(ipaPath)} reports ${name} (${code})`
+        : "  1. ./scripts/build-altstore-ipa.sh  (unsigned AltStore IPA)",
+    );
+    console.log(`  2. copy the IPA to website/altstore/${assetName}`);
+    console.log(`  3. prepend a versions[] entry to iOS/altstore/source.json`);
+    console.log("  4. mirror the source to website/altstore/source.json");
+    console.log(`  5. create/upload ${assetName} on GitHub Release ${tag}`);
+    console.log("  6. commit the channel files" + (PUSH ? " and push" : " (local only; pass --push)"));
     console.log("\nRe-run with --yes to actually publish.");
     return;
   }
 
   assertCleanMain();
+  if (!ipaArg) {
+    run("./scripts/build-altstore-ipa.sh");
+  }
+  if (!existsSync(ipaPath)) fail(`IPA not found: ${ipaPath}`);
   verifyIpa(ipaPath, name, code);
 
   const outDir = path.join(root, "build", "release", "github");
@@ -428,9 +540,60 @@ function publishIos() {
   cpSync(ipaPath, asset);
   console.log(`SHA-256 ${assetName}: ${sha256File(asset)}`);
 
+  mkdirSync(WEBSITE_ALTSTORE, { recursive: true });
+  cpSync(asset, path.join(WEBSITE_ALTSTORE, assetName));
+  const iconSource = path.join(root, "website", "icon.png");
+  cpSync(iconSource, path.join(WEBSITE_ALTSTORE, "icon.png"));
+  cpSync(iconSource, path.join(ALTSTORE_DIR, "icon.png"));
+
+  const sourcePath = path.join(ALTSTORE_DIR, "source.json");
+  const mirrorPath = path.join(WEBSITE_ALTSTORE, "source.json");
+  if (!existsSync(sourcePath)) fail(`Missing ${path.relative(root, sourcePath)}.`);
+  const data = JSON.parse(readFileSync(sourcePath, "utf8"));
+  const app = data.apps?.[0];
+  if (!app) fail("AltStore source has no apps[0].");
+
+  const size = statSync(asset).size;
+  const sha256 = sha256File(asset);
+  const date = new Date().toISOString().slice(0, 10);
+  const downloadURL = `${SITE_BASE}/altstore/${assetName}`;
+  const notes = resolveNotes(tag, name).trim();
+
+  app.version = name;
+  app.buildVersion = String(code);
+  app.versionDate = date;
+  app.size = size;
+  app.sha256 = sha256;
+  app.downloadURL = downloadURL;
+  app.versionDescription = notes;
+  app.versions = (app.versions ?? []).filter(
+    (entry) => !(entry.version === name && String(entry.buildVersion) === String(code)),
+  );
+  app.versions.unshift({
+    version: name,
+    buildVersion: String(code),
+    date,
+    localizedDescription: notes.slice(0, 4000),
+    downloadURL,
+    size,
+    sha256,
+    minOSVersion: "18.0",
+  });
+  data.version = name;
+  data.buildVersion = String(code);
+
+  for (const target of [sourcePath, mirrorPath]) {
+    writeFileSync(target, `${JSON.stringify(data, null, 2)}\n`);
+  }
+  run("node", [path.join(here, "validate-altstore.mjs")]);
+
   publishAsset(tag, name, asset);
+  commitAndMaybePush(
+    ["iOS/altstore/source.json", "website/altstore"],
+    `chore(ios,altstore): release ${name} (build ${code})`,
+  );
   maybeQueueProvenance(tag, name);
-  console.log(`\n✓ iOS ${name} published on ${tag}.`);
+  console.log(`\n✓ iOS ${name} published: AltStore source updated, ${tag} released on GitHub.`);
 }
 
 // ── entry point ───────────────────────────────────────────────────
@@ -439,7 +602,7 @@ const commands = { status, android: publishAndroid, ios: publishIos };
 if (!commands[command]) {
   console.error(
     "Usage: node tools/release/publish.mjs <status|android|ios> " +
-      "[--yes] [--notes-file <path>] [--ipa <path>] [--skip-existing]",
+      "[--yes] [--push] [--notes-file <path>] [--ipa <path>] [--skip-existing]",
   );
   process.exit(1);
 }

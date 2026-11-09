@@ -24,6 +24,12 @@ keystore.properties
 *.ipa
 *.xcarchive
 
+# The AltStore-hosted IPA is a website asset, not a local build input.
+!website/altstore/*.ipa
+
+# F-Droid working state
+Android/fdroid-repo/repo/status
+
 # macOS
 .DS_Store
 
