@@ -8,9 +8,11 @@ third-party requests.
 
 | Path | Purpose |
 |------|---------|
-| `/` | What Fathom is, the four screens, how the figures are made, and the current release status. |
+| `/` | What Fathom is, the four screens, how the figures are made, the install routes and the current release status. |
 | `/privacy/` | The privacy policy promised by `client-metadata.json` and both stores. |
 | `/terms/` | The terms of use. |
+| `/altstore/` | AltStore Classic source, icon and hosted IPA. |
+| `/fdroid/repo/` | The self-hosted F-Droid repository, mirrored from `Android/fdroid-repo/repo/`. |
 | `/client-metadata.json` | The OAuth client metadata, served unchanged. Unused today because Fathom does not write. |
 | `/icon.png` | The app icon, used by the site and by `logo_uri`. |
 
@@ -43,6 +45,25 @@ repository's Pages URL; every link inside the site is relative except the
 source and licence links, so it works under either origin. The absolute URLs in
 `client-metadata.json` remain `https://fathom.ewancroft.uk/...` on purpose:
 that is the origin the OAuth metadata names.
+
+## Install channels
+
+AltStore Classic and F-Droid are the first distribution routes. Both are
+static files under `website/`; there is no Fathom download server.
+
+- AltStore source: `https://ewanc26.github.io/fathom/altstore/source.json`.
+  `tools/release/publish.mjs ios` updates it and copies the unsigned IPA into
+  `website/altstore/`. AltStore Classic re-signs that IPA with the user's Apple
+  ID. Never add `marketplaceID`; this is not a PAL source.
+- F-Droid repo: `https://ewanc26.github.io/fathom/fdroid/repo`. The publisher
+  regenerates `Android/fdroid-repo/repo/`, mirrors it here, and updates the
+  metadata. The install link includes the repo index fingerprint
+  `DE922C5717CAB6C0A48AF84B5D0EBC72302308023DE7AC770BA68911F771BB29`.
+
+The custom domain is not live yet, so the source and repo URLs use the GitHub
+Pages origin. When DNS is configured, set `FATHOM_SITE_BASE` for the publisher,
+regenerate the source and F-Droid index, and update the links in `index.html`
+and the metadata together.
 
 ## Rules
 

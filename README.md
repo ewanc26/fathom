@@ -26,7 +26,7 @@ Read-only, and new. I would rather say so plainly.
 
 - **The dashboard works end to end.** All four screens draw from a full read of a real account, a second launch opens from the saved copy, and the reading banner can be dismissed while the read continues behind it.
 - **The figures are honest by construction.** A read that ends early is labelled partial rather than passed off as complete, and the runaway guard stops at 50,000 plays.
-- **Neither app has been run on a device.** Everything verified is Android emulator and iOS simulator. There is no signed store build yet; the first Android development preview is a debug APK on [GitHub Releases](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0), and iOS still needs a toolchain or a future signed build.
+- **Both channels are live, neither app has been run on a device.** Fathom 0.2.0 is distributed through AltStore Classic and a self-hosted F-Droid repo. Everything verified is Android emulator and iOS simulator; no physical-device smoke test has been done. The Android APK is signed with the Fathom release key. The AltStore IPA is intentionally unsigned because AltStore Classic re-signs it with the user's Apple ID.
 - **The write path is planned, not started.** Live scrobbling — OAuth, play qualification, an outbound queue and the controls that come with them — is designed in the issue tracker. Nothing here writes yet.
 
 The changelog is in [CHANGELOG.md](CHANGELOG.md), the conventions and the
@@ -61,7 +61,7 @@ research behind reading the repo at all.
 | `iOS/` | iOS client (SwiftUI), with a generated Xcode project. |
 | `lexicons/` | The `fm.teal.*` lexicons, vendored from [teal-fm/teal](https://github.com/teal-fm/teal) unmodified. |
 | `website/` | The public landing page, privacy policy, terms, client metadata and icon, served by GitHub Pages. |
-| `tools/release/` | Local signed publisher, release manifest and SBOM helpers. |
+| `tools/release/` | Local publisher for F-Droid, AltStore and GitHub Releases, plus manifest, SBOM and source validation helpers. |
 | `docs/` | Protocol research, architecture and the dashboard's design. |
 | `.github/workflows/` | CI, the Pages deployment and the release provenance workflow. |
 
@@ -218,29 +218,31 @@ Android reads that file directly; iOS is synchronised into `project.yml` and
 `Info.plist` by `python3 scripts/sync-version.py`, and CI rejects drift. Every
 uploaded build must raise `versionCode`, which is also the iOS build number.
 
-Releases follow the same split as Inkwell: the APK and IPA are built and signed
-on the publisher's machine, then attached to one unified `v<version>` GitHub
-Release. GitHub Actions never receives a signing key. The
-[Release provenance](.github/workflows/release.yml) workflow only adds SPDX
-SBOMs, a hashed release manifest and build-provenance attestations for the
-manifest and SBOMs. The AAB is a Play upload artefact, not a release asset.
+Releases follow the same split as Inkwell. The Android APK and the unsigned
+AltStore Classic IPA are built locally. The publisher adds the APK to the
+self-hosted F-Droid repo, updates the AltStore source and website, and attaches
+both binaries to one unified `v<version>` GitHub Release. GitHub Actions never
+receives a signing key. The [Release provenance](.github/workflows/release.yml)
+workflow only adds SPDX SBOMs, a hashed release manifest and build-provenance
+attestations for the manifest and SBOMs. The AAB is a Play upload artefact, not
+a release asset.
 
 The local publisher is dry-run by default:
 
 ```bash
 node tools/release/publish.mjs status
-node tools/release/publish.mjs android --yes --notes-file release-notes.md
-node tools/release/publish.mjs ios --ipa path/to/Fathom-0.2.0-9.ipa --yes
+node tools/release/publish.mjs android --yes --push --notes-file release-notes.md
+node tools/release/publish.mjs ios --yes --push
 ```
 
-No signed `v0.2.0` release exists yet because this machine has no Apple
-Distribution certificate/profile or Android upload key; #24 tracks the first
-one. A debug Android development preview is attached to
-[preview-0.2.0](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0);
-it predates the release contract, is installable beside a future release
-because its application ID ends in `.debug`, and is not store-ready. See
+`ios` builds the unsigned AltStore IPA itself. `--ipa` remains available for an
+App Store export when that channel is added. Fathom 0.2.0 is available from
+[AltStore Classic and F-Droid](https://ewanc26.github.io/fathom/#install). The
+older debug preview at
+[preview-0.2.0](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0)
+predates the contract and is not a release. See
 [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md) for local signing, provenance
-verification, the internal-testing checklist and rollback.
+verification, store handoff and rollback.
 
 The public site lives in [`website/`](website/).
 [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to
@@ -261,11 +263,11 @@ no build step, no JavaScript, no analytics and no third-party requests.
 - **Incremental refresh trusts the saved tail.** A record edited or deleted
   below that tail is only picked up by **Read everything**; ordinary refresh is
   for new plays, not a rewritten repo.
-- **No signed store build.** Release binaries must be built and signed
-  locally, and this machine does not have the Apple certificate/profile or
-  Android upload key yet, so no signed `v0.2.0` release exists. Play internal
-  testing and TestFlight are still manual. The Android debug preview is a
-  development build, not a substitute for one.
+- **No App Store or Play listing.** The first channels are AltStore Classic
+  and a self-hosted F-Droid repo, not the official stores. Play internal
+  testing and TestFlight still need their app records, signing certificates
+  and manual uploads. The Android debug preview is a development build, not a
+  substitute for a release.
 - **Figures are local.** They are computed from this repo, not from teal.fm's
   network-wide stats endpoints, and the two are not the same measurement.
 - **No OAuth.** None is needed to read, and a half-implemented flow would be

@@ -230,6 +230,14 @@ h3 {
   color: var(--muted);
 }
 
+.card .button {
+  margin-top: 1.25rem;
+}
+
+.install-grid {
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
 code {
   padding: 0.1em 0.35em;
   border-radius: 5px;

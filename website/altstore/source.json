@@ -1,0 +1,35 @@
+{
+  "name": "Fathom",
+  "subtitle": "Your listening, from your own repo",
+  "description": "A native, read-only teal.fm dashboard for iOS. Fathom reads the plays already in your AT Protocol repository and computes the figures on your device.",
+  "website": "https://ewanc26.github.io/fathom/",
+  "iconURL": "https://ewanc26.github.io/fathom/altstore/icon.png",
+  "tintColor": "#2dd4bf",
+  "featuredApps": [
+    "uk.ewancroft.fathom"
+  ],
+  "apps": [
+    {
+      "name": "Fathom",
+      "bundleIdentifier": "uk.ewancroft.fathom",
+      "developerName": "Ewan Croft",
+      "subtitle": "A read-only teal.fm dashboard",
+      "localizedDescription": "Fathom is a native dashboard for the plays already in your AT Protocol repository.\n\nNow — what is playing, today's plays and time, your current streak, a fourteen-day chart and recent plays.\n\nStats — plays, time, artists, releases and tracks for 7 days, 30 days or all time, with the busiest day and most used service.\n\nHistory — every play, grouped by the day you actually had it, with search and a month jump.\n\nProfile — your teal.fm profile, DID and a plain statement of where the figures come from.\n\nFathom is read-only. It has no account, no password and no token. It reads public records directly from your PDS, never through a Fathom backend, and saves the last read on your device so the next launch opens immediately.\n\nAltStore Classic signs this unsigned IPA with your own Apple ID when it installs it.",
+      "iconURL": "https://ewanc26.github.io/fathom/altstore/icon.png",
+      "tintColor": "#2dd4bf",
+      "category": "social",
+      "screenshots": [
+        "https://ewanc26.github.io/fathom/images/now.png",
+        "https://ewanc26.github.io/fathom/images/stats.png",
+        "https://ewanc26.github.io/fathom/images/history.png",
+        "https://ewanc26.github.io/fathom/images/profile.png"
+      ],
+      "versions": [],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      }
+    }
+  ],
+  "news": []
+}

@@ -25,6 +25,7 @@
     <nav aria-label="Primary">
       <a href="#about">About</a>
       <a href="#screens">Screens</a>
+      <a href="#install">Install</a>
       <a href="#figures">How it works</a>
       <a href="https://github.com/ewanc26/fathom">Source</a>
     </nav>
@@ -40,10 +41,47 @@
         and every play grouped by the day you actually had.
       </p>
       <div class="actions">
-        <a class="button" href="https://github.com/ewanc26/fathom">View the source</a>
+        <a class="button" href="#install">Install Fathom</a>
         <a class="button secondary" href="#figures">How the figures are made</a>
       </div>
       <p class="note">Read-only. No account, no password, no token.</p>
+    </section>
+
+    <section id="install" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">Install</p>
+        <h2>AltStore Classic and F-Droid first.</h2>
+        <p class="lede">
+          Fathom 0.2.0 is distributed outside the app stores. Both routes are
+          self-hosted and update from this site.
+        </p>
+      </div>
+      <div class="cards install-grid">
+        <article class="card">
+          <h3>iPhone and iPad</h3>
+          <p>
+            Add the Fathom source in AltStore Classic. AltStore Classic signs
+            the unsigned IPA with your own Apple ID; this is not an App Store
+            or AltStore PAL build.
+          </p>
+          <a class="button" href="altstore://source?url=https%3A%2F%2Fewanc26.github.io%2Ffathom%2Faltstore%2Fsource.json">Add to AltStore</a>
+          <p class="note">Requires iOS 18 or later and AltStore Classic.</p>
+        </article>
+        <article class="card">
+          <h3>Android</h3>
+          <p>
+            Add the self-hosted repository to F-Droid. The link includes the
+            repo index fingerprint so F-Droid can verify it. Fathom is not in
+            the official F-Droid catalogue.
+          </p>
+          <a class="button" href="https://fdroid.link/#https://ewanc26.github.io/fathom/fdroid/repo?fingerprint=DE922C5717CAB6C0A48AF84B5D0EBC72302308023DE7AC770BA68911F771BB29">Add F-Droid repo</a>
+          <p class="note">Requires Android 8.0 or later.</p>
+        </article>
+      </div>
+      <p class="note">
+        No App Store or Google Play listing yet. Direct APK and IPA downloads
+        are on <a href="https://github.com/ewanc26/fathom/releases">GitHub Releases</a>.
+      </p>
     </section>
 
     <section id="about" class="section">
@@ -144,17 +182,19 @@
     <section id="status" class="section status">
       <div>
         <p class="eyebrow">Release status</p>
-        <h2>Not yet in a store.</h2>
+        <h2>Available outside the app stores.</h2>
         <p>
-          Fathom is read-only and still new. Signed Android and iOS artifacts
-          are the next release step; until then, the source repository is the
-          only install route. The apps have been run against a real account on
-          an Android emulator and an iOS simulator, not on a physical device.
+          Fathom 0.2.0 is the first signed release: an Android APK through the
+          F-Droid repo, and an unsigned IPA through AltStore Classic, which
+          signs it on install. Both are built from the tagged source. The apps
+          have been run against a real account on an Android emulator and an
+          iOS simulator; they have not yet been smoke-tested on physical
+          hardware.
         </p>
       </div>
       <div class="status-links">
-        <a class="button" href="https://github.com/ewanc26/fathom">Build from source</a>
-        <a class="button secondary" href="https://github.com/ewanc26/fathom/issues">Open issues</a>
+        <a class="button" href="#install">Install Fathom</a>
+        <a class="button secondary" href="https://github.com/ewanc26/fathom/releases">Release notes</a>
       </div>
     </section>
   </main>
