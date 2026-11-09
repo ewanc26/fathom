@@ -20,6 +20,12 @@ grouped by the day you actually had.
 It is a **reader**. It never writes a record, never asks for a password and
 never holds a token.
 
+## The name
+
+A fathom is a unit of depth, and to fathom something is to understand it. Both
+meanings fit: Fathom measures a listening history and makes the record
+underneath it legible, while leaving that record in your own repository.
+
 ## Status
 
 Read-only, and new. I would rather say so plainly.
