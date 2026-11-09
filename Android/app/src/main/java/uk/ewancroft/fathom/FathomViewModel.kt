@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,7 +31,13 @@ import uk.ewancroft.fathom.shared.stats.Period
  * plays, and letting each tab re-fetch would mean four different answers to
  * "how many plays this week" on the same screen.
  */
-class FathomViewModel(application: Application) : AndroidViewModel(application) {
+class FathomViewModel @JvmOverloads constructor(
+    application: Application,
+    private val repository: FathomRepository = FathomRepository(),
+    private val store: IdentityStore = IdentityStore(application),
+    private val cache: HistoryCacheStore = HistoryCacheStore(application),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) : AndroidViewModel(application) {
 
     data class UiState(
         val identity: String? = null,
@@ -45,9 +52,6 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
         val error: String? = null,
     )
 
-    private val store = IdentityStore(application)
-    private val cache = HistoryCacheStore(application)
-    private val repository = FathomRepository()
     private val _state = MutableStateFlow(
         UiState(identity = store.identity(), period = store.period()),
     )
@@ -64,7 +68,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
             // background coroutine because decoding tens of thousands of
             // plays is not main-thread work.
             viewModelScope.launch {
-                val restored = withContext(Dispatchers.IO) {
+                val restored = withContext(ioDispatcher) {
                     cache.read(identity)?.let { repository.fromCache(it, _state.value.period) }
                 }
                 if (restored != null) {
@@ -140,7 +144,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                 // Saved even when partial: the flag travels with it, so the
                 // next launch draws the same plays with the same label rather
                 // than pretending it has nothing to show.
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     cache.write(
                         repository.toCache(
                             identity = trimmed,
@@ -228,7 +232,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     },
                 )
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     cache.write(
                         repository.toCache(
                             identity = identity,
@@ -266,7 +270,7 @@ class FathomViewModel(application: Application) : AndroidViewModel(application) 
     private suspend fun checkpoint(identity: String, forceFull: Boolean): ReadCheckpoint? {
         if (forceFull) return null
         _state.value.dashboard?.let { return it.toCheckpoint() }
-        return withContext(Dispatchers.IO) { cache.read(identity)?.toCheckpoint() }
+        return withContext(ioDispatcher) { cache.read(identity)?.toCheckpoint() }
     }
 
     /**
