@@ -67,7 +67,7 @@ data class StatusRefresh(
  * as soon as it arrives and the rest follow, rather than leaving the app on a
  * spinner. A later refresh stops at the first wholly known page instead.
  */
-class FathomRepository(private val client: TealReadClient = TealClient()) {
+open class FathomRepository(private val client: TealReadClient = TealClient()) {
 
     /**
      * Reads [identity]'s history, calling [onProgress] with a dashboard after
@@ -83,7 +83,7 @@ class FathomRepository(private val client: TealReadClient = TealClient()) {
      * checkpoint for the explicit "read everything" action, which is how an
      * edited or deleted record is noticed.
      */
-    suspend fun load(
+    open suspend fun load(
         identity: String,
         period: Period,
         checkpoint: ReadCheckpoint? = null,
@@ -235,7 +235,7 @@ class FathomRepository(private val client: TealReadClient = TealClient()) {
      * clearing a live card because one poll failed would be a worse lie than
      * one stale minute.
      */
-    suspend fun refreshStatus(dashboard: Dashboard): StatusRefresh {
+    open suspend fun refreshStatus(dashboard: Dashboard): StatusRefresh {
         val pds = dashboard.pds ?: client.pdsFor(dashboard.did)
         return StatusRefresh(
             pds = pds,
@@ -250,7 +250,7 @@ class FathomRepository(private val client: TealReadClient = TealClient()) {
      * in memory, and re-fetching thousands of them to move a seven-day window
      * would make every chip tap cost a minute.
      */
-    fun rerange(
+    open fun rerange(
         dashboard: Dashboard,
         period: Period,
         nowEpochSeconds: Long = System.currentTimeMillis() / 1_000L,
@@ -266,7 +266,7 @@ class FathomRepository(private val client: TealReadClient = TealClient()) {
     )
 
     /** The cache entry for a completed read of [identity]. */
-    fun toCache(identity: String, dashboard: Dashboard, savedAtEpochSeconds: Long): CachedHistory =
+    open fun toCache(identity: String, dashboard: Dashboard, savedAtEpochSeconds: Long): CachedHistory =
         CachedHistory(
             version = HistoryCache.VERSION,
             identity = identity,
@@ -288,7 +288,7 @@ class FathomRepository(private val client: TealReadClient = TealClient()) {
      * at the guard or on a failed page is still drawn, still labelled partial,
      * and still refreshed behind that label.
      */
-    fun fromCache(
+    open fun fromCache(
         cached: CachedHistory,
         period: Period,
         nowEpochSeconds: Long = System.currentTimeMillis() / 1_000L,
