@@ -93,7 +93,7 @@ research behind reading the repo at all.
   statement of where the figures come from.
 - **About** — the version and build number from the actual bundle, the source
   repository, the AGPL-3.0 text bundled for offline reading, third-party
-  notices, and links to the privacy policy and terms.
+  notices, and links to the privacy policy, terms and support.
 - **Saved history** — a completed read is written to app-private storage, so a
   second launch draws the dashboard immediately and refreshes behind it. A
   complete saved copy is also the stopping point for an incremental read: only
@@ -203,9 +203,10 @@ them.
   legacy artist names, releases and multi-word queries on both platforms.
 - `iOS/FathomTests/` covers the Swift-facing facade — that the bridge still
   carries a play, a page and a computed figure.
-- Android has a JVM suite for the transport's retry and error paths and the
-  repository's partial/absent paging (`:app:testDebugUnitTest`, run by CI);
-  everything worth testing about the figures is in the shared core.
+- Android has a JVM suite for the transport's retry and error paths, the
+  repository's partial/absent paging, and the ViewModel's cache restore,
+  cancellation and reading-banner state (`:app:testDebugUnitTest`, run by
+  CI); everything worth testing about the figures is in the shared core.
 
 Both apps have been run against a real account (`ewancroft.uk`) on an Android
 emulator and an iOS simulator. That run is what found a facade method that

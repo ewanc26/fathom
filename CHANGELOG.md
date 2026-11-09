@@ -8,6 +8,9 @@ semantic versioning.
 
 ### Added
 
+- Android ViewModel tests covering cache restore against a first empty page,
+  superseded reads, dismissal of the reading banner, and disconnect cleanup.
+- A support link in About on both platforms, pointing at the issue tracker.
 - AltStore Classic and self-hosted F-Droid distribution. The publisher now
   builds an unsigned IPA for AltStore, regenerates and mirrors the signed
   F-Droid repo, updates both channel files, and pushes the website assets with
