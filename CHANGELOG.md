@@ -61,8 +61,7 @@ repo; there is no App Store or Google Play listing.
   readable offline.
 - A public website in `website/`: landing page, privacy policy, terms of use,
   the app icon and the client metadata. It is plain HTML and CSS with no
-  JavaScript, analytics or third-party requests, and is deployed by GitHub
-  Pages.
+  JavaScript, analytics or third-party requests, and is deployed on Vercel.
 - A tag-driven release path: `v<versionName>` builds the signed artifacts,
   checks the tag against `version.properties`, and publishes the AAB, APK, IPA
   and checksums on a GitHub Release. A manual dispatch builds artifacts
@@ -178,3 +177,10 @@ repo; there is no App Store or Google Play listing.
   transfer, and from iCloud and computer backups on iOS. The iOS file is also
   written with complete file protection, so it is unreadable while the device
   is locked.
+
+## [0.1.0] - 2026-11-08 [pre-release]
+
+The development version before Fathom's first tagged build. It established the
+four-screen dashboard, the shared Kotlin core and the read-only PDS path, but
+no release binary was published. The last 0.1.0 source snapshot is tagged
+`v0.1.0`; the first installable release is 0.2.0.

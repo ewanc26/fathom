@@ -24,6 +24,9 @@ The release workflow then attaches:
 - a build-provenance attestation for the manifest and SBOMs.
 
 The old `preview-0.2.0` debug APK is a development preview, not a `v*` release.
+`v0.1.0` is a source-only pre-release preserving the last 0.1.0 snapshot; it has
+no APK, IPA or provenance assets. The first unified, installable release is
+`v0.2.0`.
 
 ## One version source
 
