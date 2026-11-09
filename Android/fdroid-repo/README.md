@@ -77,10 +77,11 @@ together with a site move.
 
 ## Icon extraction
 
-Android's release resource optimiser can flatten `res/mipmap-*/ic_launcher.png`
-into an obfuscated path. If F-Droid shows no app icon, check
-`repo/icons-640/` after `fdroid update -v` before changing anything else. The
-Fathom artwork source is `website/icon.png`.
+fdroidserver extracts a raster `res/mipmap-*/ic_launcher.png`; it does not
+render an adaptive-icon XML. Fathom therefore ships PNG fallbacks at every
+density in addition to the adaptive icon. If `repo/icons-640/` is empty after
+`fdroid update -v`, check that those PNGs survived resource shrinking before
+changing anything else. The artwork source is `website/icon.png`.
 
 ## Verification
 

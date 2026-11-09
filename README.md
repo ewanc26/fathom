@@ -26,7 +26,7 @@ Read-only, and new. I would rather say so plainly.
 
 - **The dashboard works end to end.** All four screens draw from a full read of a real account, a second launch opens from the saved copy, and the reading banner can be dismissed while the read continues behind it.
 - **The figures are honest by construction.** A read that ends early is labelled partial rather than passed off as complete, and the runaway guard stops at 50,000 plays.
-- **Both channels are live, neither app has been run on a device.** Fathom 0.2.0 is distributed through AltStore Classic and a self-hosted F-Droid repo. Everything verified is Android emulator and iOS simulator; no physical-device smoke test has been done. The Android APK is signed with the Fathom release key. The AltStore IPA is intentionally unsigned because AltStore Classic re-signs it with the user's Apple ID.
+- **Both channels are live, neither app has been run on a device.** Fathom 0.2.1 is distributed through AltStore Classic and a self-hosted F-Droid repo. Everything verified is Android emulator and iOS simulator; no physical-device smoke test has been done. The Android APK is signed with the Fathom release key. The AltStore IPA is intentionally unsigned because AltStore Classic re-signs it with the user's Apple ID.
 - **The write path is planned, not started.** Live scrobbling — OAuth, play qualification, an outbound queue and the controls that come with them — is designed in the issue tracker. Nothing here writes yet.
 
 The changelog is in [CHANGELOG.md](CHANGELOG.md), the conventions and the
@@ -236,7 +236,7 @@ node tools/release/publish.mjs ios --yes --push
 ```
 
 `ios` builds the unsigned AltStore IPA itself. `--ipa` remains available for an
-App Store export when that channel is added. Fathom 0.2.0 is available from
+App Store export when that channel is added. Fathom 0.2.1 is available from
 [AltStore Classic and F-Droid](https://ewanc26.github.io/fathom/#install). The
 older debug preview at
 [preview-0.2.0](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0)

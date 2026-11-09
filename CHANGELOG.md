@@ -27,6 +27,13 @@ semantic versioning.
 - `RELEASE_PROCESS.md` replaces `docs/RELEASE.md` and documents local signing,
   provenance verification, store handoff and rollback.
 
+## [0.2.1] - 2026-11-09
+
+0.2.1 fixes the F-Droid listing icon. 0.2.0's APK contained only an adaptive
+icon XML, which fdroidserver does not render; the release adds raster mipmap
+fallbacks at every density. No app behaviour changed. Both channels move to
+build 10.
+
 ## [0.2.0] - 2026-11-08
 
 0.2.0 is the first tagged release. It adds the About surface, History search
