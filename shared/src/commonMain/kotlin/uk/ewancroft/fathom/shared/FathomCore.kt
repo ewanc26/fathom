@@ -278,5 +278,7 @@ object FathomCore {
 
     fun termsUrl(): String = AboutInfo.TERMS_URL
 
+    fun supportUrl(): String = AboutInfo.SUPPORT_URL
+
     fun thirdPartyNotices(): String = AboutInfo.THIRD_PARTY_NOTICES
 }

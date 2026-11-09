@@ -50,6 +50,7 @@ final class FathomCoreTests: XCTestCase {
         XCTAssertEqual(FathomCore.shared.sourceUrl(), "https://github.com/ewanc26/fathom")
         XCTAssertEqual(FathomCore.shared.privacyUrl(), "https://fathom.ewancroft.uk/privacy")
         XCTAssertEqual(FathomCore.shared.termsUrl(), "https://fathom.ewancroft.uk/terms")
+        XCTAssertEqual(FathomCore.shared.supportUrl(), "https://github.com/ewanc26/fathom/issues")
         XCTAssertTrue(FathomCore.shared.thirdPartyNotices().contains("Apache License 2.0"))
     }
 
