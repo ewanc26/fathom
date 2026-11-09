@@ -121,11 +121,16 @@ if (app.versions.length > 0) {
   }
 
   if (hosted) {
-    const response = await fetch(latest.downloadURL, { method: "HEAD" });
-    if (!response.ok) fail(`HEAD ${latest.downloadURL} returned ${response.status}.`);
-    const length = Number(response.headers.get("content-length"));
-    if (length && length !== latest.size) {
-      fail(`Hosted IPA is ${length} bytes; source.json says ${latest.size}.`);
+    const response = await fetch(latest.downloadURL);
+    if (!response.ok) fail(`GET ${latest.downloadURL} returned ${response.status}.`);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length !== latest.size) {
+      fail(`Hosted IPA is ${bytes.length} bytes; source.json says ${latest.size}.`);
+    }
+    const { createHash } = await import("node:crypto");
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    if (digest !== latest.sha256) {
+      fail(`Hosted IPA SHA-256 is ${digest}; source.json says ${latest.sha256}.`);
     }
   }
 }
