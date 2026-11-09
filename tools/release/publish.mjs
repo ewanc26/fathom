@@ -80,7 +80,7 @@ function fail(message) {
   process.exit(1);
 }
 
-function run(cmd, cmdArgs, opts = {}) {
+function run(cmd, cmdArgs = [], opts = {}) {
   console.log(`$ ${cmd} ${cmdArgs.join(" ")}`);
   return execFileSync(cmd, cmdArgs, {
     cwd: opts.cwd ?? root,
