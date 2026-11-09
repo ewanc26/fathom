@@ -154,6 +154,7 @@ fun ProfileScreen(
             onOpenSource = { uriHandler.openUri(FathomCore.sourceUrl()) },
             onOpenPrivacy = { uriHandler.openUri(FathomCore.privacyUrl()) },
             onOpenTerms = { uriHandler.openUri(FathomCore.termsUrl()) },
+            onOpenSupport = { uriHandler.openUri(FathomCore.supportUrl()) },
             onOpenLicence = { showAbout = true },
         )
 
@@ -197,6 +198,7 @@ private fun AboutPanel(
     onOpenSource: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenTerms: () -> Unit,
+    onOpenSupport: () -> Unit,
     onOpenLicence: () -> Unit,
 ) {
     Panel {
@@ -219,6 +221,7 @@ private fun AboutPanel(
             TextButton(onClick = onOpenSource) { Text("Source code") }
             TextButton(onClick = onOpenPrivacy) { Text("Privacy policy") }
             TextButton(onClick = onOpenTerms) { Text("Terms of use") }
+            TextButton(onClick = onOpenSupport) { Text("Support and feedback") }
             Text(
                 text = FathomCore.copyright(),
                 style = MaterialTheme.typography.labelSmall,

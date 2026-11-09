@@ -16,6 +16,7 @@ object AboutInfo {
     const val LICENCE_URL: String = "https://www.gnu.org/licenses/agpl-3.0.html"
     const val PRIVACY_URL: String = "https://fathom.ewancroft.uk/privacy"
     const val TERMS_URL: String = "https://fathom.ewancroft.uk/terms"
+    const val SUPPORT_URL: String = "https://github.com/ewanc26/fathom/issues"
 
     /**
      * The notices a binary has to carry for the libraries it actually ships.

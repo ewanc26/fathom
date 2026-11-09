@@ -46,6 +46,7 @@ struct AboutView: View {
                         Link("Source code", destination: url(FathomCore.shared.sourceUrl()))
                         Link("Privacy policy", destination: url(FathomCore.shared.privacyUrl()))
                         Link("Terms of use", destination: url(FathomCore.shared.termsUrl()))
+                        Link("Support and feedback", destination: url(FathomCore.shared.supportUrl()))
                         Link("GNU AGPL-3.0", destination: url(FathomCore.shared.licenceUrl()))
                     }
                     .font(.subheadline)
