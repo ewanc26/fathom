@@ -58,7 +58,7 @@ the account's own repo — is planned and tracked in the issue tracker.
     `Model/AppModel.swift`, `Features/` per screen, `Components/` shared,
     `Resources/` for the bundled licence.
 - `website/`
-  - Plain HTML and CSS served by GitHub Pages. `/privacy/` and `/terms/` are
+  - Plain HTML and CSS served by Vercel. `/privacy/` and `/terms/` are
     linked from the client metadata, both stores and the About sections.
     Claims here must describe the code, not an aspiration.
 - `tools/release/`

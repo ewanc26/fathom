@@ -5,7 +5,10 @@ machine, and GitHub Actions only records provenance for the exact bytes that
 were published.** No signing key, password or profile is stored in GitHub.
 
 AltStore Classic and a self-hosted F-Droid repo are the first distribution
-routes. The App Store and Google Play are planned, not live.
+routes. The App Store and Google Play are planned, not live. The website and
+both channel files are served by Vercel at `https://fathom-app-delta.vercel.app`;
+`fathom.ewancroft.uk` is attached to the same project and remains the canonical
+app and legal origin while its DNS record is pending.
 
 One version is one unified GitHub Release tagged `v<version>`, named
 `Fathom <version>`, with:
@@ -28,7 +31,7 @@ The old `preview-0.2.0` debug APK is a development preview, not a `v*` release.
 
 ```properties
 versionName=0.2.1
-versionCode=9
+versionCode=10
 ```
 
 - Android reads it directly in `Android/app/build.gradle.kts`.
@@ -156,10 +159,15 @@ export IOS_PROVISIONING_PROFILE_SPECIFIER='Fathom App Store'
 
 Keep that path separate from the AltStore source.
 
-## Custom domain
+## Website hosting and custom domain
 
-The site currently uses `https://ewanc26.github.io/fathom`. When
-`fathom.ewancroft.uk` resolves:
+Vercel deploys the repository as project `fathom-app`, serving `website/` as a
+static site. The working project URL is `https://fathom-app-delta.vercel.app`. The
+custom domain `fathom.ewancroft.uk` is attached to the project, but its CNAME
+record is still pending. In Cloudflare, add `CNAME fathom` →
+`3012d949f736e19c.vercel-dns-017.com` with the proxy disabled (DNS only).
+
+When the CNAME resolves, switch the generated channel URLs together:
 
 ```bash
 export FATHOM_SITE_BASE='https://fathom.ewancroft.uk'
@@ -167,7 +175,9 @@ export FATHOM_SITE_BASE='https://fathom.ewancroft.uk'
 
 Regenerate the AltStore source and F-Droid index with the publisher, and update
 the links in `website/index.html` and `website/README.md`. Do not change only the
-mirror: the index advertises its own repository address.
+mirror: the index advertises its own repository address. The canonical links in
+`website/client-metadata.json`, the app's About screen and the legal pages can
+stay on `fathom.ewancroft.uk` throughout.
 
 ## Provenance in CI
 
@@ -208,13 +218,13 @@ attested document to the binaries.
 ### AltStore Classic
 
 The source is live at
-`https://ewanc26.github.io/fathom/altstore/source.json`. Add it in AltStore
+`https://fathom-app-delta.vercel.app/altstore/source.json`. Add it in AltStore
 Classic with **Sources → +**. The hosted IPA is re-signed by AltStore, so the
 installed signature is not the hosted file's signature.
 
 ### F-Droid
 
-The repo is live at `https://ewanc26.github.io/fathom/fdroid/repo`. Add it by
+The repo is live at `https://fathom-app-delta.vercel.app/fdroid/repo`. Add it by
 link or QR code in F-Droid; the fingerprint is in the website install link.
 
 ### Play internal testing
@@ -258,7 +268,7 @@ Alternatively, open the IPA in Transporter.
       `versions[0]` matches `version.properties`.
 - [ ] Wait for **Release provenance** and confirm the manifest and both SBOMs
       are attached.
-- [ ] Verify the install links on the live Pages site.
+- [ ] Verify the install links on the live Vercel site.
 - [ ] Upload the AAB to Play and the App Store IPA to TestFlight when those
       records exist.
 
@@ -289,6 +299,7 @@ higher build.
   certificate/profile and Play upload key are separate work.
 - No physical-device smoke test has been done; 0.2.1 is emulator and simulator
   verified.
-- The custom domain `fathom.ewancroft.uk` has no DNS record yet, so the live
-  channel URLs use the GitHub Pages origin.
+- The custom domain `fathom.ewancroft.uk` is attached to Vercel but its
+  Cloudflare CNAME is not set yet, so the live channel URLs use the Vercel
+  project URL.
 - Store uploads are manual.

@@ -96,7 +96,7 @@ keyPassword=$APP_PASSWORD
 EOF
 
 cat > "$REPO_CONFIG" <<EOF
-repo_url: https://ewanc26.github.io/fathom/fdroid/repo
+repo_url: https://fathom-app-delta.vercel.app/fdroid/repo
 repo_name: Fathom
 repo_description: A read-only teal.fm dashboard for Android.
 archive_older: 10

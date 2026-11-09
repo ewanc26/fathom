@@ -4,7 +4,7 @@ The public landing page and the privacy and terms documents for Fathom. It is
 plain HTML and CSS with no build step, no JavaScript, no cookies and no
 third-party requests.
 
-## Pages
+## Paths
 
 | Path | Purpose |
 |------|---------|
@@ -27,43 +27,56 @@ Then open <http://localhost:8000>. The clean URLs are directories, so
 
 ## Deploy
 
-`.github/workflows/pages.yml` publishes `website/` to GitHub Pages on every
-push to `main` that changes it, and on manual dispatch.
+Vercel deploys this repository as project **`fathom-app`**. The repository root
+stays the project root; [`../vercel.json`](../vercel.json) serves `website/` as
+a static site and enforces trailing slashes. There is no build command and no
+framework preset to maintain.
 
-One-time setup:
+The Vercel Git integration deploys `main` on every push that changes the site.
+To deploy manually:
 
-1. In **Settings → Pages**, set **Source** to **GitHub Actions**.
-2. The `CNAME` file asks Pages for `fathom.ewancroft.uk`. At the DNS provider,
-   add a `CNAME` record for `fathom` pointing at `ewanc26.github.io`.
-3. After DNS resolves, enable **Enforce HTTPS** in the Pages settings.
+```bash
+vercel link --project fathom-app
+vercel --prod
+```
 
-The workflow uses the `github-pages` environment and needs `pages: write` and
-`id-token: write`. It does not need repository secrets.
+The working project origin is `https://fathom-app-delta.vercel.app`.
 
-If the custom domain is not configured yet, the workflow still publishes to the
-repository's Pages URL; every link inside the site is relative except the
-source and licence links, so it works under either origin. The absolute URLs in
-`client-metadata.json` remain `https://fathom.ewancroft.uk/...` on purpose:
-that is the origin the OAuth metadata names.
+`fathom.ewancroft.uk` is attached to the same Vercel project and is the
+canonical origin for the app's About links, the OAuth client metadata and the
+legal pages. Its Cloudflare DNS record is still pending. Add this record in
+Cloudflare:
+
+| Type | Name | Target | Proxy |
+|------|------|--------|-------|
+| CNAME | `fathom` | `3012d949f736e19c.vercel-dns-017.com` | **DNS only** (grey cloud) |
+
+Do not proxy the record through Cloudflare. Once it resolves, Vercel issues
+the certificate. Do not add a `CNAME` file to this directory: that only applies
+to GitHub Pages, which is no longer used.
+
+The absolute URLs in `client-metadata.json` remain
+`https://fathom.ewancroft.uk/...` on purpose: that is the origin the OAuth
+metadata names. Until the custom domain resolves, the channel files and install
+links use the working Vercel project origin.
 
 ## Install channels
 
 AltStore Classic and F-Droid are the first distribution routes. Both are
 static files under `website/`; there is no Fathom download server.
 
-- AltStore source: `https://ewanc26.github.io/fathom/altstore/source.json`.
+- AltStore source: `https://fathom-app-delta.vercel.app/altstore/source.json`.
   `tools/release/publish.mjs ios` updates it and copies the unsigned IPA into
   `website/altstore/`. AltStore Classic re-signs that IPA with the user's Apple
   ID. Never add `marketplaceID`; this is not a PAL source.
-- F-Droid repo: `https://ewanc26.github.io/fathom/fdroid/repo`. The publisher
+- F-Droid repo: `https://fathom-app-delta.vercel.app/fdroid/repo`. The publisher
   regenerates `Android/fdroid-repo/repo/`, mirrors it here, and updates the
   metadata. The install link includes the repo index fingerprint
   `DE922C5717CAB6C0A48AF84B5D0EBC72302308023DE7AC770BA68911F771BB29`.
 
-The custom domain is not live yet, so the source and repo URLs use the GitHub
-Pages origin. When DNS is configured, set `FATHOM_SITE_BASE` for the publisher,
-regenerate the source and F-Droid index, and update the links in `index.html`
-and the metadata together.
+Once `fathom.ewancroft.uk` resolves, set `FATHOM_SITE_BASE` for the publisher,
+regenerate the AltStore source and F-Droid index, and update the links in
+`index.html` and the metadata together.
 
 ## Rules
 

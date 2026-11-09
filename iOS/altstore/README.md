@@ -1,7 +1,7 @@
 # AltStore Classic source
 
 This directory is the source of truth for Fathom's AltStore Classic source at
-`https://ewanc26.github.io/fathom/altstore/source.json`. The publisher writes
+`https://fathom-app-delta.vercel.app/altstore/source.json`. The publisher writes
 the same file to `website/altstore/source.json`; the two must stay byte-for-byte
 identical.
 
@@ -34,15 +34,17 @@ array order, not dates, to decide what is newer. Each entry needs a distinct
 Only the publisher should edit `source.json`. Hand-editing the `versions` array
 is how the top-level latest fields and the mirror drift apart.
 
-The IPA files live under `website/altstore/` and are committed so GitHub Pages
-serves them. This directory ignores local IPAs.
+The IPA files live under `website/altstore/` and are committed so Vercel serves
+them. This directory ignores local IPAs.
 
 ## Hosted paths
 
-- Source: `https://ewanc26.github.io/fathom/altstore/source.json`
-- Icon: `https://ewanc26.github.io/fathom/altstore/icon.png`
-- IPA: `https://ewanc26.github.io/fathom/altstore/Fathom-<version>.ipa`
+- Source: `https://fathom-app-delta.vercel.app/altstore/source.json`
+- Icon: `https://fathom-app-delta.vercel.app/altstore/icon.png`
+- IPA: `https://fathom-app-delta.vercel.app/altstore/Fathom-<version>.ipa`
 
-The custom domain `fathom.ewancroft.uk` is not live yet. The publisher uses
-`FATHOM_SITE_BASE` to switch all hosted URLs once DNS is configured; regenerate
-the source and F-Droid index at the same time.
+The Vercel project URL is the working channel origin. The custom domain
+`fathom.ewancroft.uk` is attached to the same Vercel project but its DNS record
+is still pending. The publisher uses `FATHOM_SITE_BASE` to switch all hosted
+URLs once DNS resolves; regenerate the source and F-Droid index at the same
+time.
