@@ -1,7 +1,7 @@
 # Fathom self-hosted F-Droid repo
 
 This is the `fdroidserver` working copy for the repo hosted at
-`https://fathom-app-delta.vercel.app/fdroid/repo`. It lives inside the Fathom
+`https://fathom.ewancroft.uk/fdroid/repo`. It lives inside the Fathom
 repository. The generated `repo/`, `metadata/`, icon and this README are
 tracked; the signing material is not.
 

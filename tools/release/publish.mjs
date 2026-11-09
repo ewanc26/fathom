@@ -51,7 +51,7 @@ import path from "node:path";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const repo = "ewanc26/fathom";
-const SITE_BASE = (process.env.FATHOM_SITE_BASE ?? "https://fathom-app-delta.vercel.app").replace(
+const SITE_BASE = (process.env.FATHOM_SITE_BASE ?? "https://fathom.ewancroft.uk").replace(
   /\/+$/,
   "",
 );

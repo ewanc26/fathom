@@ -237,7 +237,7 @@ node tools/release/publish.mjs ios --yes --push
 
 `ios` builds the unsigned AltStore IPA itself. `--ipa` remains available for an
 App Store export when that channel is added. Fathom 0.2.1 is available from
-[AltStore Classic and F-Droid](https://fathom-app-delta.vercel.app/#install). The
+[AltStore Classic and F-Droid](https://fathom.ewancroft.uk/#install). The
 older debug preview at
 [preview-0.2.0](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0)
 predates the contract and is not a release. See
@@ -246,9 +246,8 @@ verification, store handoff and rollback.
 
 The public site lives in [`website/`](website/). Vercel deploys it from the
 repository, serving that directory through [`vercel.json`](vercel.json) with no
-build step. The project URL is `https://fathom-app-delta.vercel.app`.
-`fathom.ewancroft.uk` is attached to the same project and remains the canonical
-app and legal origin, but its DNS record is still pending; see
+build step at `https://fathom.ewancroft.uk`. The custom domain is live; the
+`fathom-app` project URL remains a fallback. See
 [`website/README.md`](website/README.md). The site has no JavaScript, no
 analytics and no third-party requests.
 

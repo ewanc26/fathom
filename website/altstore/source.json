@@ -2,8 +2,8 @@
   "name": "Fathom",
   "subtitle": "Your listening, from your own repo",
   "description": "A native, read-only teal.fm dashboard for iOS. Fathom reads the plays already in your AT Protocol repository and computes the figures on your device.",
-  "website": "https://fathom-app-delta.vercel.app/",
-  "iconURL": "https://fathom-app-delta.vercel.app/altstore/icon.png",
+  "website": "https://fathom.ewancroft.uk/",
+  "iconURL": "https://fathom.ewancroft.uk/altstore/icon.png",
   "tintColor": "#2dd4bf",
   "featuredApps": [
     "uk.ewancroft.fathom"
@@ -15,22 +15,22 @@
       "developerName": "Ewan Croft",
       "subtitle": "A read-only teal.fm dashboard",
       "localizedDescription": "Fathom is a native dashboard for the plays already in your AT Protocol repository.\n\nNow — what is playing, today's plays and time, your current streak, a fourteen-day chart and recent plays.\n\nStats — plays, time, artists, releases and tracks for 7 days, 30 days or all time, with the busiest day and most used service.\n\nHistory — every play, grouped by the day you actually had it, with search and a month jump.\n\nProfile — your teal.fm profile, DID and a plain statement of where the figures come from.\n\nFathom is read-only. It has no account, no password and no token. It reads public records directly from your PDS, never through a Fathom backend, and saves the last read on your device so the next launch opens immediately.\n\nAltStore Classic signs this unsigned IPA with your own Apple ID when it installs it.",
-      "iconURL": "https://fathom-app-delta.vercel.app/altstore/icon.png",
+      "iconURL": "https://fathom.ewancroft.uk/altstore/icon.png",
       "tintColor": "#2dd4bf",
       "category": "social",
       "screenshots": [
-        "https://fathom-app-delta.vercel.app/images/now.png",
-        "https://fathom-app-delta.vercel.app/images/stats.png",
-        "https://fathom-app-delta.vercel.app/images/history.png",
-        "https://fathom-app-delta.vercel.app/images/profile.png"
+        "https://fathom.ewancroft.uk/images/now.png",
+        "https://fathom.ewancroft.uk/images/stats.png",
+        "https://fathom.ewancroft.uk/images/history.png",
+        "https://fathom.ewancroft.uk/images/profile.png"
       ],
       "versions": [
         {
           "version": "0.2.1",
           "buildVersion": "10",
           "date": "2026-11-09",
-          "localizedDescription": "Fathom 0.2.1 fixes the F-Droid listing icon and moves both channels to build 10. There are no app behaviour changes.\n\n## Fixed\n\n- F-Droid now has a raster launcher icon at every density. 0.2.0's APK contained only the adaptive-icon XML, which fdroidserver does not render, so the listing had no icon.\n\n## Install\n\n- **iPhone and iPad:** add the AltStore Classic source at https://fathom-app-delta.vercel.app/altstore/source.json.\n- **Android:** add the F-Droid repo at https://fathom-app-delta.vercel.app/fdroid/repo.\n\nDirect APK and IPA downloads are attached to this release. There is no App Store or Google Play listing.\n\nThe apps have been run against a real account on an Android emulator and an iOS simulator, not on physical hardware. The Android APK is signed with the Fathom release key; the AltStore IPA is unsigned on purpose and is re-signed by AltStore Classic.",
-          "downloadURL": "https://fathom-app-delta.vercel.app/altstore/Fathom-0.2.1.ipa",
+          "localizedDescription": "Fathom 0.2.1 fixes the F-Droid listing icon and moves both channels to build 10. There are no app behaviour changes.\n\n## Fixed\n\n- F-Droid now has a raster launcher icon at every density. 0.2.0's APK contained only the adaptive-icon XML, which fdroidserver does not render, so the listing had no icon.\n\n## Install\n\n- **iPhone and iPad:** add the AltStore Classic source at https://fathom.ewancroft.uk/altstore/source.json.\n- **Android:** add the F-Droid repo at https://fathom.ewancroft.uk/fdroid/repo.\n\nDirect APK and IPA downloads are attached to this release. There is no App Store or Google Play listing.\n\nThe apps have been run against a real account on an Android emulator and an iOS simulator, not on physical hardware. The Android APK is signed with the Fathom release key; the AltStore IPA is unsigned on purpose and is re-signed by AltStore Classic.",
+          "downloadURL": "https://fathom.ewancroft.uk/altstore/Fathom-0.2.1.ipa",
           "size": 1213918,
           "sha256": "dfa11ab2d13375f72284d510920b7c2871e889b79c5f2b12697188677b04ced9",
           "minOSVersion": "18.0"
@@ -39,8 +39,8 @@
           "version": "0.2.0",
           "buildVersion": "9",
           "date": "2026-11-09",
-          "localizedDescription": "Fathom 0.2.0 is the first signed release, distributed through AltStore Classic and a self-hosted F-Droid repo.\n\n## Install\n\n- **iPhone and iPad:** add the AltStore Classic source at https://fathom-app-delta.vercel.app/altstore/source.json. AltStore Classic signs the unsigned IPA with your own Apple ID.\n- **Android:** add the F-Droid repo at https://fathom-app-delta.vercel.app/fdroid/repo. The install link on the website includes the repo index fingerprint.\n- Direct APK and IPA downloads are attached to this release.\n\nThere is no App Store or Google Play listing.\n\n## What's changed\n\n- Added History search over track, artist and release, implemented once in the shared Kotlin core.\n- Added the History month jump and a match count that distinguishes no matches from no plays.\n- Added About with the actual bundle version, the AGPL-3.0 text, third-party notices and legal links.\n- Added the public website, privacy policy and terms.\n- Added the unified release contract: local signing, one `v0.2.0` GitHub Release, and CI provenance for the exact published bytes.\n- Added AltStore Classic and F-Droid channel files, with separate app-signing and repo-index keys.\n\n## Verification and limitations\n\nThe apps have been run against a real account on an Android emulator and an iOS simulator. They have not been smoke-tested on physical hardware. The Android APK is signed with the Fathom release key. The AltStore IPA is unsigned on purpose; AltStore Classic re-signs it on install. The F-Droid repo index is signed with a separate, offline repo key.",
-          "downloadURL": "https://fathom-app-delta.vercel.app/altstore/Fathom-0.2.0.ipa",
+          "localizedDescription": "Fathom 0.2.0 is the first signed release, distributed through AltStore Classic and a self-hosted F-Droid repo.\n\n## Install\n\n- **iPhone and iPad:** add the AltStore Classic source at https://fathom.ewancroft.uk/altstore/source.json. AltStore Classic signs the unsigned IPA with your own Apple ID.\n- **Android:** add the F-Droid repo at https://fathom.ewancroft.uk/fdroid/repo. The install link on the website includes the repo index fingerprint.\n- Direct APK and IPA downloads are attached to this release.\n\nThere is no App Store or Google Play listing.\n\n## What's changed\n\n- Added History search over track, artist and release, implemented once in the shared Kotlin core.\n- Added the History month jump and a match count that distinguishes no matches from no plays.\n- Added About with the actual bundle version, the AGPL-3.0 text, third-party notices and legal links.\n- Added the public website, privacy policy and terms.\n- Added the unified release contract: local signing, one `v0.2.0` GitHub Release, and CI provenance for the exact published bytes.\n- Added AltStore Classic and F-Droid channel files, with separate app-signing and repo-index keys.\n\n## Verification and limitations\n\nThe apps have been run against a real account on an Android emulator and an iOS simulator. They have not been smoke-tested on physical hardware. The Android APK is signed with the Fathom release key. The AltStore IPA is unsigned on purpose; AltStore Classic re-signs it on install. The F-Droid repo index is signed with a separate, offline repo key.",
+          "downloadURL": "https://fathom.ewancroft.uk/altstore/Fathom-0.2.0.ipa",
           "size": 1213900,
           "sha256": "508db0971e4cbe36a59333e5e7e43944f77ab235f465fd89ee21c781c705fb97",
           "minOSVersion": "18.0"
@@ -55,8 +55,8 @@
       "versionDate": "2026-11-09",
       "size": 1213918,
       "sha256": "dfa11ab2d13375f72284d510920b7c2871e889b79c5f2b12697188677b04ced9",
-      "downloadURL": "https://fathom-app-delta.vercel.app/altstore/Fathom-0.2.1.ipa",
-      "versionDescription": "Fathom 0.2.1 fixes the F-Droid listing icon and moves both channels to build 10. There are no app behaviour changes.\n\n## Fixed\n\n- F-Droid now has a raster launcher icon at every density. 0.2.0's APK contained only the adaptive-icon XML, which fdroidserver does not render, so the listing had no icon.\n\n## Install\n\n- **iPhone and iPad:** add the AltStore Classic source at https://fathom-app-delta.vercel.app/altstore/source.json.\n- **Android:** add the F-Droid repo at https://fathom-app-delta.vercel.app/fdroid/repo.\n\nDirect APK and IPA downloads are attached to this release. There is no App Store or Google Play listing.\n\nThe apps have been run against a real account on an Android emulator and an iOS simulator, not on physical hardware. The Android APK is signed with the Fathom release key; the AltStore IPA is unsigned on purpose and is re-signed by AltStore Classic."
+      "downloadURL": "https://fathom.ewancroft.uk/altstore/Fathom-0.2.1.ipa",
+      "versionDescription": "Fathom 0.2.1 fixes the F-Droid listing icon and moves both channels to build 10. There are no app behaviour changes.\n\n## Fixed\n\n- F-Droid now has a raster launcher icon at every density. 0.2.0's APK contained only the adaptive-icon XML, which fdroidserver does not render, so the listing had no icon.\n\n## Install\n\n- **iPhone and iPad:** add the AltStore Classic source at https://fathom.ewancroft.uk/altstore/source.json.\n- **Android:** add the F-Droid repo at https://fathom.ewancroft.uk/fdroid/repo.\n\nDirect APK and IPA downloads are attached to this release. There is no App Store or Google Play listing.\n\nThe apps have been run against a real account on an Android emulator and an iOS simulator, not on physical hardware. The Android APK is signed with the Fathom release key; the AltStore IPA is unsigned on purpose and is re-signed by AltStore Classic."
     }
   ],
   "news": [],
