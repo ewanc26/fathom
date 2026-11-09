@@ -1,5 +1,6 @@
 # Build output
 build/
+.vercel/
 .gradle/
 *.iml
 .idea/
@@ -29,9 +30,11 @@ keystore.properties
 
 # F-Droid working state
 Android/fdroid-repo/repo/status
+website/fdroid/repo/status
 
 # macOS
 .DS_Store
 
 # Kotlin/Native
 .kotlin/
+.env*

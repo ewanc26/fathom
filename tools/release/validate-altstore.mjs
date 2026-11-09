@@ -4,7 +4,7 @@
 //   node tools/release/validate-altstore.mjs [--allow-empty] [--hosted]
 //
 // --allow-empty  permit a source with no versions yet.
-// --hosted       HEAD the newest downloadURL and compare Content-Length.
+// --hosted       GET the newest downloadURL and compare its bytes and SHA-256.
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";

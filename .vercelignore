@@ -1,0 +1,12 @@
+.git
+.github
+.gradle
+.kotlin
+build
+Android
+shared
+iOS
+lexicons
+docs
+tools
+scripts

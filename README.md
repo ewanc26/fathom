@@ -60,10 +60,10 @@ research behind reading the repo at all.
 | `Android/` | Android client (Kotlin, Compose, Material 3). Also the only Gradle root. |
 | `iOS/` | iOS client (SwiftUI), with a generated Xcode project. |
 | `lexicons/` | The `fm.teal.*` lexicons, vendored from [teal-fm/teal](https://github.com/teal-fm/teal) unmodified. |
-| `website/` | The public landing page, privacy policy, terms, client metadata and icon, served by GitHub Pages. |
+| `website/` | The public landing page, privacy policy, terms, client metadata and icon, served by Vercel. |
 | `tools/release/` | Local publisher for F-Droid, AltStore and GitHub Releases, plus manifest, SBOM and source validation helpers. |
 | `docs/` | Protocol research, architecture and the dashboard's design. |
-| `.github/workflows/` | CI, the Pages deployment and the release provenance workflow. |
+| `.github/workflows/` | CI and the release provenance workflow. |
 
 ## Features
 
@@ -237,18 +237,20 @@ node tools/release/publish.mjs ios --yes --push
 
 `ios` builds the unsigned AltStore IPA itself. `--ipa` remains available for an
 App Store export when that channel is added. Fathom 0.2.1 is available from
-[AltStore Classic and F-Droid](https://ewanc26.github.io/fathom/#install). The
+[AltStore Classic and F-Droid](https://fathom-app-delta.vercel.app/#install). The
 older debug preview at
 [preview-0.2.0](https://github.com/ewanc26/fathom/releases/tag/preview-0.2.0)
 predates the contract and is not a release. See
 [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md) for local signing, provenance
 verification, store handoff and rollback.
 
-The public site lives in [`website/`](website/).
-[`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to
-GitHub Pages; the custom domain `fathom.ewancroft.uk` still needs its DNS
-record, as documented in [`website/README.md`](website/README.md). The site has
-no build step, no JavaScript, no analytics and no third-party requests.
+The public site lives in [`website/`](website/). Vercel deploys it from the
+repository, serving that directory through [`vercel.json`](vercel.json) with no
+build step. The project URL is `https://fathom-app-delta.vercel.app`.
+`fathom.ewancroft.uk` is attached to the same project and remains the canonical
+app and legal origin, but its DNS record is still pending; see
+[`website/README.md`](website/README.md). The site has no JavaScript, no
+analytics and no third-party requests.
 
 ## Limitations
 
