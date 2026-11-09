@@ -27,7 +27,7 @@ The old `preview-0.2.0` debug APK is a development preview, not a `v*` release.
 [`version.properties`](version.properties) is the only version source:
 
 ```properties
-versionName=0.2.0
+versionName=0.2.1
 versionCode=9
 ```
 
@@ -91,7 +91,7 @@ release. A notes file is only used when the release is created; edit an existing
 release with:
 
 ```bash
-gh release edit v0.2.0 --notes-file release-notes.md
+gh release edit v0.2.1 --notes-file release-notes.md
 ```
 
 `--skip-existing` makes a rerun a no-op when that platform asset is already
@@ -251,7 +251,7 @@ Alternatively, open the IPA in Transporter.
 - [ ] Run the shared tests, Android tests and iOS `FathomTests`.
 - [ ] Smoke-test on a real account: Now, Stats, History, search, month jump,
       About version, refresh, read everything, disconnect and confirm the saved
-      history is gone. A physical device is still outstanding for 0.2.0.
+      history is gone. A physical device is still outstanding for 0.2.1.
 - [ ] Run the Android publisher with `--yes --push`.
 - [ ] Run the iOS publisher with `--yes --push`.
 - [ ] Confirm the F-Droid repo includes the APK and the AltStore source's
@@ -287,7 +287,7 @@ higher build.
 
 - No App Store or Google Play listing. Their app records, Apple Distribution
   certificate/profile and Play upload key are separate work.
-- No physical-device smoke test has been done; 0.2.0 is emulator and simulator
+- No physical-device smoke test has been done; 0.2.1 is emulator and simulator
   verified.
 - The custom domain `fathom.ewancroft.uk` has no DNS record yet, so the live
   channel URLs use the GitHub Pages origin.
