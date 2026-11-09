@@ -15,10 +15,8 @@ semantic versioning.
 
 ### Changed
 
-- The website and both channel files are now deployed by Vercel at
-  `https://fathom-app-delta.vercel.app`; the GitHub Pages deployment has been removed.
-  The canonical `fathom.ewancroft.uk` domain is attached to the same project but
-  waits on its DNS record.
+- The website and both channel files moved from GitHub Pages to Vercel at
+  `https://fathom.ewancroft.uk`. The GitHub Pages deployment has been removed.
 - Releases now follow Inkwell's split: `tools/release/publish.mjs` builds and
   signs the Android APK locally, builds the AltStore IPA, updates the
   self-hosted F-Droid repo, and creates one unified `v<version>` GitHub Release.
