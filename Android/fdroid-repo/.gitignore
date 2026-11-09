@@ -4,3 +4,5 @@ keystore.p12
 *.jks
 archive/
 repo/status
+
+tmp/
