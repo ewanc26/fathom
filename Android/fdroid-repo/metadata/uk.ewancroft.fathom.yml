@@ -31,8 +31,8 @@ Description: |-
 RepoType: git
 Repo: https://github.com/ewanc26/fathom
 
-CurrentVersion: '0.2.0'
-CurrentVersionCode: 9
+CurrentVersion: '0.2.1'
+CurrentVersionCode: 10
 
 AutoUpdateMode: None
 UpdateCheckMode: None
