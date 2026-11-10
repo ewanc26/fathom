@@ -2,7 +2,10 @@ package uk.ewancroft.fathom.shared
 
 import uk.ewancroft.fathom.shared.auth.OAuthCallback
 import uk.ewancroft.fathom.shared.auth.crypto.Es256Key
+import uk.ewancroft.fathom.shared.auth.oauth.OAuthEngine
+import uk.ewancroft.fathom.shared.auth.oauth.OAuthHttp
 import uk.ewancroft.fathom.shared.auth.oauth.OAuthSession
+import uk.ewancroft.fathom.shared.auth.oauth.epochSeconds
 import uk.ewancroft.fathom.shared.auth.storage.AuthStoreFormat
 import uk.ewancroft.fathom.shared.auth.OAuthRedirect
 import uk.ewancroft.fathom.shared.auth.PendingAuthorization
@@ -291,7 +294,20 @@ object FathomCore {
         }
     }
 
-    // ── Credential storage codecs (#9) ────────────────────────────────────
+    // ── Sign-in entry points (#9) ─────────────────────────────────────────
+
+    /**
+     * A transport engine over the platform HTTP seam, on the platform clock.
+     * The platform keeps one engine for the signed-in account's lifetime;
+     * the DPoP nonce memory inside it is per-session.
+     */
+    fun oauthEngine(http: OAuthHttp): OAuthEngine = OAuthEngine(http) { epochSeconds() }
+
+    /** Claims the OAuth callback #8's reception wired into [receiveOAuthCallback]. */
+    fun takePendingAuthorization(): OAuthCallback.Authorised? =
+        uk.ewancroft.fathom.shared.auth.PendingAuthorization.take()
+
+    // ── Credential storage codecs ────────────────────────────────────────
 
     /**
      * The stored form of a session, produced by the shared codecs and handed

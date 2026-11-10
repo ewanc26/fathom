@@ -8,6 +8,16 @@ semantic versioning.
 
 ### Added
 
+- Sign-in sequencing on both platforms (#9, slice 4a): `AuthManager`
+  resolves the account through the read client, discovers its
+  authorization server, starts the engine's PAR flow and hands the
+  browser URL back, claims the callback the manifest already routes into
+  the app, and stores or clears the credential through the secure store.
+  Shared entry points on the facade construct the engine on a
+  platform clock (`epochSeconds`) and expose the pending callback. The
+  screens that call these managers — the browser handoff and the
+  signed-in row — are the remaining UI wiring.
+
 - The OAuth write path's transport engine (#9, slice 3): a shared
   `OAuthEngine` that walks atproto's OAuth 2.1 flow over one synchronous
   `OAuthHttp` seam — Authorization Server discovery at the PDS, PAR with the
