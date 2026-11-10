@@ -185,5 +185,17 @@ a redirect is not authorising anything: matching the `state` and redeeming the
 `code` with PKCE and DPoP are the login flow's job, and no such flow exists
 yet.
 
-Until then there is nothing to authorise and no credential to keep, which is
-why there is no Keychain or Keystore code in either app.
+The OAuth 2.1 machinery itself is now in the shared core (`shared/.../auth/oauth`):
+PKCE with the RFC 7636 vectors, ES256 DPoP proof construction, Authorization
+Server metadata and token grant parsing, a session type that applies expiry
+skew and inspects granted scope, and the PAR/authorize/exchange request
+builders that match `state` against #8's callback parser before any token
+request is made. P-256 keys travel as raw scalars through
+`Es256Platform` (java.security behind one `javaMain` source set, the Security
+framework on iOS), so the Keychain/Keystore stores can persist one byte form
+on both platforms. The DPoP nonce retry rule lives with the transport: a
+`use_dpop_nonce` rejection is retried exactly once with the nonce from the
+response.
+
+Until the storage and transport slices land there is no credential to keep,
+which is why there is still no Keychain or Keystore code in either app.

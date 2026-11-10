@@ -8,6 +8,18 @@ semantic versioning.
 
 ### Added
 
+- The shared OAuth 2.1 core for the write path (#9): pure-Kotlin SHA-256 and
+  unpadded base64url primitives cross-checked against java.security, PKCE
+  with the RFC 7636 vectors, RFC 7638 JWK thumbprints, ES256 DPoP proof
+  construction with platform signing (java.security on a shared JVM/Android
+  source set, the Security framework on iOS — both compiled and passing on
+  the iOS simulator's native test target), Authorization Server metadata,
+  token grant and error parsing, an `OAuthSession` with expiry skew, scope
+  inspection and refresh-body construction, and `AuthorizationRequest`
+  building the PAR form, authorize redirect and token exchange with state
+  matching against #8's callback parser. No storage, network or UI yet —
+  those are #9's remaining slices.
+
 - The native OAuth redirect `uk.ewancroft.fathom:/oauth/callback` is now a
   contract both platforms honour: iOS registers the scheme in
   `CFBundleURLTypes`, Android adds a `VIEW`/`BROWSABLE` intent filter, and a
