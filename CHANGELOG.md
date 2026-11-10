@@ -8,6 +8,18 @@ semantic versioning.
 
 ### Added
 
+- The OAuth write path's transport engine (#9, slice 3): a shared
+  `OAuthEngine` that walks atproto's OAuth 2.1 flow over one synchronous
+  `OAuthHttp` seam — Authorization Server discovery at the PDS, PAR with the
+  DPoP key bound at request time, the authorize redirect from the PAR
+  session, a state-matched token exchange, refresh rotation, best-effort
+  revocation, and DPoP-authenticated resource requests that refresh a stale
+  token before sending. A `use_dpop_nonce` challenge is retried exactly once
+  with the server's nonce — never a loop — and `invalid_grant` is surfaced as
+  sign-out. Transport failures arrive as replies with status 0, not
+  exceptions. Android implements the seam with OkHttp; iOS with URLSession.
+  No screen starts a flow yet — that is the UI slice.
+
 - Credential storage for the OAuth write path (#9, slice 2): the shared
   core owns the stored formats (session and DPoP key as strings the secure
   stores persist, round-tripped and rejected-unparseable in tests), Android
