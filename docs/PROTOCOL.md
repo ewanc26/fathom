@@ -165,9 +165,10 @@ calls, and a client that writes needs a hosted `client-metadata.json` and the
 matching `repo:` scopes. Fathom would need:
 
 ```
+atproto
 repo:fm.teal.feed.play?action=create
 repo:fm.teal.actor.profile?action=create&action=update
-repo:fm.teal.actor.status?action=create&action=delete
+repo:fm.teal.actor.status?action=create&action=update&action=delete
 ```
 
 Those live in `shared/.../auth/Scopes.kt` and in `website/client-metadata.json`

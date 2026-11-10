@@ -16,25 +16,41 @@ package uk.ewancroft.fathom.shared.auth
  */
 object TealScopes {
 
-    /** Creating a play record. */
+    /**
+     * The base grant every authenticated request needs: it covers reading the
+     * authenticated account's own identity without granting repository
+     * writes. A read-only client sends exactly this.
+     */
+    const val AT_PROTO = "atproto"
+
+    /**
+     * Creating a play record. Create only: the play queue writes
+     * `createRecord` with a client-generated TID, so retries pick a fresh
+     * record rather than mutating an existing one.
+     */
     const val PLAY_CREATE = "repo:fm.teal.feed.play?action=create"
 
     /** Creating or updating the single `literal:self` profile record. */
     const val PROFILE_WRITE = "repo:fm.teal.actor.profile?action=create&action=update"
 
-    /** Replacing or clearing the single `literal:self` status record. */
-    const val STATUS_WRITE = "repo:fm.teal.actor.status?action=create&action=delete"
-
-    /** Every scope a full read/write Fathom would request. Unused today. */
-    val all: List<String> = listOf(PLAY_CREATE, PROFILE_WRITE, STATUS_WRITE)
+    /**
+     * Setting, replacing or clearing the single `literal:self` status record.
+     * Replacing an existing record needs `update`; `create` alone would fail
+     * the second write, and `delete` is what clears a now-playing status.
+     */
+    const val STATUS_WRITE =
+        "repo:fm.teal.actor.status?action=create&action=update&action=delete"
 
     /**
-     * The `scope` value a read-only client sends.
-     *
-     * `atproto` is the base grant: it covers reading the authenticated
-     * account's own identity without granting repository writes.
+     * Every scope a full read/write Fathom would request, including the
+     * `atproto` base. This list is the single source of truth for the
+     * `scope` string in `website/client-metadata.json`; the JVM drift test
+     * fails if the two disagree. Unused today.
      */
-    const val READ_ONLY = "atproto"
+    val all: List<String> = listOf(AT_PROTO, PLAY_CREATE, PROFILE_WRITE, STATUS_WRITE)
+
+    /** The space-joined `scope` value for a full read/write client. */
+    val fullWriteRequest: String get() = all.joinToString(" ")
 }
 
 /** The records Fathom reads, described once for the UI's provenance line. */
