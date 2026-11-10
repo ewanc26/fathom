@@ -60,6 +60,23 @@ kotlin {
     }
 
     sourceSets {
+        // The default hierarchy template is disabled for this module
+        // (kotlin.mpp.applyDefaultHierarchyTemplate=false in gradle.properties):
+        // its rules forbid custom dependsOn edges, and one shared edge is
+        // needed. The hierarchy is therefore declared in full:
+        //   commonMain → javaMain → {jvmMain, androidMain}
+        //   commonMain → iosMain → {iosX64Main, iosArm64Main, iosSimulatorArm64Main}
+        // javaMain gives java.security code one home shared by the jvm test
+        // target and the Android app, so the ES256 signer is not written —
+        // and drifted — twice.
+        val javaMain by creating { dependsOn(commonMain.get()) }
+        jvmMain { dependsOn(javaMain) }
+        androidMain { dependsOn(javaMain) }
+        val iosMain by creating { dependsOn(commonMain.get()) }
+        iosX64Main { dependsOn(iosMain) }
+        iosArm64Main { dependsOn(iosMain) }
+        iosSimulatorArm64Main { dependsOn(iosMain) }
+
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
         }

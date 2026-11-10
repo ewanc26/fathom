@@ -42,6 +42,13 @@ class ClientMetadataDriftTest {
     }
 
     @Test
+    fun hostedClientIdMatchesTealScopes() {
+        // OAuth requests name the client by this URL; a mismatch makes the
+        // Authorization Server refuse the client it cannot resolve.
+        assertEquals(TealScopes.CLIENT_ID, field(metadata().readText(), "client_id"))
+    }
+
+    @Test
     fun nativeClientDeclaresNoTokenEndpointAuthMethod() {
         // A public native client has no secret; omitting this field would
         // default it to client_secret_basic and break the token request.
