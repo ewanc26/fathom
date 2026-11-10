@@ -51,6 +51,14 @@ object TealScopes {
 
     /** The space-joined `scope` value for a full read/write client. */
     val fullWriteRequest: String get() = all.joinToString(" ")
+
+    /**
+     * The hosted OAuth client id. Like the scope string, this is a contract
+     * with `website/client-metadata.json` — the server resolves the client
+     * by fetching this URL, so the two must not drift; the JVM drift test
+     * pins them together. Unused until the write path starts (#9).
+     */
+    const val CLIENT_ID = "https://fathom.ewancroft.uk/client-metadata.json"
 }
 
 /** The records Fathom reads, described once for the UI's provenance line. */
