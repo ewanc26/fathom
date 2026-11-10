@@ -2,7 +2,8 @@
 <!--
     The same exclusion as backup_rules.xml for API 31 and newer. Device
     transfer is included because moving a cache to a new phone is just as
-    unnecessary as restoring it from the cloud.
+    unnecessary as restoring it from the cloud, and the OAuth credential is
+    keyed to this device's Keystore and cannot work elsewhere anyway.
 -->
 <data-extraction-rules>
     <cloud-backup>
