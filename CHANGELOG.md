@@ -8,6 +8,17 @@ semantic versioning.
 
 ### Added
 
+- Credential storage for the OAuth write path (#9, slice 2): the shared
+  core owns the stored formats (session and DPoP key as strings the secure
+  stores persist, round-tripped and rejected-unparseable in tests), Android
+  keeps them encrypted with a hardware-backed AES-GCM Keystore key in an
+  atomically written `filesDir/fathom/auth.bin` inside the already
+  backup-excluded directory, and iOS keeps them in two ThisDeviceOnly
+  Keychain items. The FathomCore facade exposes the codecs for Swift. The
+  encryption is one seam so the file, envelope and wiped-on-failure layers
+  are tested without a Keystore, and the backup rules now name the
+  credential in their comments.
+
 - The shared OAuth 2.1 core for the write path (#9): pure-Kotlin SHA-256 and
   unpadded base64url primitives cross-checked against java.security, PKCE
   with the RFC 7636 vectors, RFC 7638 JWK thumbprints, ES256 DPoP proof
