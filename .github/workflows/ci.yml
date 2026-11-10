@@ -82,6 +82,20 @@ jobs:
           node --check tools/release/validate-altstore.mjs
           node tools/release/validate-altstore.mjs --allow-empty
 
+  client-metadata:
+    name: OAuth client metadata smoke check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      # Fathom's own origin serves the metadata, so the live fetch is part
+      # of the contract (issue #8): a DNS or deploy regression must fail CI,
+      # not a first login attempt.
+      - name: Verify metadata offline and live
+        run: python3 scripts/verify-oauth-metadata.py --live
+
   ios:
     name: iOS unit tests
     runs-on: macos-latest

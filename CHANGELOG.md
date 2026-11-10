@@ -8,6 +8,13 @@ semantic versioning.
 
 ### Added
 
+- The native OAuth redirect `uk.ewancroft.fathom:/oauth/callback` is now a
+  contract both platforms honour: iOS registers the scheme in
+  `CFBundleURLTypes`, Android adds a `VIEW`/`BROWSABLE` intent filter, and a
+  parser in the shared core turns the callback into a code-and-state pair the
+  future login flow can claim. A JVM drift test pins the metadata's
+  `redirect_uris` to it, and `scripts/verify-oauth-metadata.py` smoke-checks
+  the hosted metadata (offline, and live in CI).
 - Android ViewModel tests covering cache restore against a first empty page,
   superseded reads, dismissal of the reading banner, and disconnect cleanup.
 - A support link in About on both platforms, pointing at the issue tracker.
