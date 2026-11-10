@@ -35,3 +35,6 @@ data class OAuthHttpReply(
 fun interface OAuthHttp {
     fun call(call: OAuthHttpCall): OAuthHttpReply
 }
+
+/** Wall-clock seconds since the epoch, for token expiry and proof times. */
+expect fun epochSeconds(): Long
