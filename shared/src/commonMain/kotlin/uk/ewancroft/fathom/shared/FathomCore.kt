@@ -1,5 +1,8 @@
 package uk.ewancroft.fathom.shared
 
+import uk.ewancroft.fathom.shared.auth.OAuthCallback
+import uk.ewancroft.fathom.shared.auth.OAuthRedirect
+import uk.ewancroft.fathom.shared.auth.PendingAuthorization
 import uk.ewancroft.fathom.shared.auth.Provenance
 import uk.ewancroft.fathom.shared.cache.CachedHistory
 import uk.ewancroft.fathom.shared.cache.HistoryCache
@@ -259,6 +262,31 @@ object FathomCore {
     fun productionNamespace(): String = Provenance.PRODUCTION_NAMESPACE
 
     fun legacyNamespace(): String = Provenance.LEGACY_NAMESPACE
+
+    // ── OAuth callback (issue #8) ─────────────────────────────────────────
+
+    /**
+     * The redirect URI both platforms register with the OS. Derived, not
+     * restated: the manifest filter and `CFBundleURLTypes` must answer to
+     * exactly this scheme and path.
+     */
+    fun oauthRedirectUri(): String = OAuthRedirect.REDIRECT_URI
+
+    /**
+     * Receives a URL the OS delivered to the app. A recognised success
+     * redirect is retained for the login flow (#9) to claim; a denial or an
+     * unrelated URL returns false and stores nothing, because there is no
+     * flow to hand it to yet — nothing pretends the login succeeded.
+     */
+    fun receiveOAuthCallback(url: String): Boolean {
+        when (val parsed = OAuthRedirect.parse(url)) {
+            is OAuthCallback.Authorised -> {
+                PendingAuthorization.retain(parsed)
+                return true
+            }
+            else -> return false
+        }
+    }
 
     // ── About ────────────────────────────────────────────────────────────
 
