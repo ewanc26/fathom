@@ -1,6 +1,9 @@
 package uk.ewancroft.fathom.shared
 
 import uk.ewancroft.fathom.shared.auth.OAuthCallback
+import uk.ewancroft.fathom.shared.auth.crypto.Es256Key
+import uk.ewancroft.fathom.shared.auth.oauth.OAuthSession
+import uk.ewancroft.fathom.shared.auth.storage.AuthStoreFormat
 import uk.ewancroft.fathom.shared.auth.OAuthRedirect
 import uk.ewancroft.fathom.shared.auth.PendingAuthorization
 import uk.ewancroft.fathom.shared.auth.Provenance
@@ -287,6 +290,23 @@ object FathomCore {
             else -> return false
         }
     }
+
+    // ── Credential storage codecs (#9) ────────────────────────────────────
+
+    /**
+     * The stored form of a session, produced by the shared codecs and handed
+     * to the platform secure store only. `null` from the decode side means
+     * signed out — a caller must never render a partial credential.
+     */
+    fun encodeOAuthSession(session: OAuthSession): String =
+        AuthStoreFormat.encodeSession(session)
+
+    fun decodeOAuthSession(text: String): OAuthSession? =
+        AuthStoreFormat.decodeSession(text)
+
+    fun encodeEs256Key(key: Es256Key): String = AuthStoreFormat.encodeKey(key)
+
+    fun decodeEs256Key(text: String): Es256Key? = AuthStoreFormat.decodeKey(text)
 
     // ── About ────────────────────────────────────────────────────────────
 

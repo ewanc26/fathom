@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     The saved history is a cache of public records that can be read again at
-    any time. Excluding it keeps a complete listening history out of a backup
-    the person did not ask Fathom to make. The handle and period are small
+    any time, and the OAuth credential (auth.bin) is encrypted with a Keystore
+    key that cannot restore onto another device. Excluding the directory keeps
+    a complete listening history and the account's tokens out of a backup the
+    person did not ask Fathom to make. The handle and period are small
     preferences and may be restored.
 -->
 <full-backup-content>
