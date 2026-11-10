@@ -6,9 +6,10 @@
   "tos_uri": "https://fathom.ewancroft.uk/terms",
   "policy_uri": "https://fathom.ewancroft.uk/privacy",
   "redirect_uris": ["uk.ewancroft.fathom:/oauth/callback"],
-  "scope": "atproto repo:fm.teal.feed.play?action=create repo:fm.teal.actor.profile?action=create&action=update repo:fm.teal.actor.status?action=create&action=delete",
+  "scope": "atproto repo:fm.teal.feed.play?action=create repo:fm.teal.actor.profile?action=create&action=update repo:fm.teal.actor.status?action=create&action=update&action=delete",
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "application_type": "native",
+  "token_endpoint_auth_method": "none",
   "dpop_bound_access_tokens": true
 }
