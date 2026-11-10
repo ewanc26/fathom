@@ -176,5 +176,14 @@ so that the day a write is added, the two cannot drift. A scope can only name
 collections in the client's own namespace unless `include:` is used, which is
 why teal's collections are named individually rather than granted wholesale.
 
+The metadata declares one native redirect, `uk.ewancroft.fathom:/oauth/callback`.
+Both platforms register that scheme (`CFBundleURLTypes` on iOS, a `VIEW`/
+`BROWSABLE` intent filter on Android) and deliver every callback URL to
+`shared/.../auth/OAuthRedirect`, the one parser; a recognised success redirect
+is retained by `PendingAuthorization` until the login flow claims it. Parsing
+a redirect is not authorising anything: matching the `state` and redeeming the
+`code` with PKCE and DPoP are the login flow's job, and no such flow exists
+yet.
+
 Until then there is nothing to authorise and no credential to keep, which is
 why there is no Keychain or Keystore code in either app.

@@ -64,6 +64,12 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
+        # The OAuth redirect scheme (issue #8), matching the redirect URI in
+        # website/client-metadata.json. FathomApp.onOpenURL receives it.
+        CFBundleURLTypes:
+          - CFBundleURLName: uk.ewancroft.fathom
+            CFBundleURLSchemes:
+              - uk.ewancroft.fathom
 
   # Not part of the default scheme: it needs the public network and minutes
   # of paging against a real repo. Run it with `-scheme FathomAccount`.
