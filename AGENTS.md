@@ -4,11 +4,9 @@ Guidance for AI coding agents working in **fathom**.
 
 ## Project overview
 
-A native teal.fm client for iOS and Android: a read-only listening dashboard
-over a shared Kotlin Multiplatform core. The write path — live scrobbling to
-the account's own repo — is planned and tracked in the issue tracker.
+A native teal.fm client for iOS and Android: a read-only listening dashboard over a shared Kotlin Multiplatform core. The write path — live scrobbling to the account's own repo — is planned and tracked in the issue tracker.
 
-- Language: Kotlin (Multiplatform core), Swift (iOS UI), Kotlin/Compose (Android UI)
+- Language: Kotlin
 - Default branch: main
 
 ## Principles
@@ -40,7 +38,8 @@ the account's own repo — is planned and tracked in the issue tracker.
 
 - `shared/src/commonMain/kotlin/uk/ewancroft/fathom/shared/`
   - `model/` — lexicon records as data classes, plus the tolerant page types.
-  - `stats/` — `Period` and `StatsCalculator`, the only place a figure is
+ 
+ - `stats/` — `Period` and `StatsCalculator`, the only place a figure is
     computed.
   - `time/` — RFC 3339 parsing and calendar arithmetic, with no platform types.
   - `format/` — durations, counts, relative times, service names.
@@ -75,7 +74,8 @@ the account's own repo — is planned and tracked in the issue tracker.
   can exist in one repo. Read both, and say when older records are included.
 - `fm.teal.feed.play` requires only `trackName`. `artists` can be present and
   empty, and `trackName` can be empty in a status record. Never assume a play
-  has a track or an artist.
+  has a track o
+r an artist.
 - A `listRecords` envelope carries `uri` and `cid`; both are copied onto the
   play. Deduplicate by URI only: the same track played twice is two plays,
   while the same URI is one record.
@@ -105,7 +105,8 @@ the account's own repo — is planned and tracked in the issue tracker.
   `literal:self` record is normal.
 - Idempotent reads retry 429, 5xx, timeouts and connection failures three
   times through `RetryPolicy`; never retry 400 or 404. `Retry-After` is
-  honoured in seconds and HTTP-date form, and every wait is capped.
+  honoured in seconds and HTTP-date f
+orm, and every wait is capped.
 - Facet byte offsets and timestamps are not character indices. Day bucketing is
   by the listener's offset, through an explicit floor division.
 
@@ -151,7 +152,8 @@ claim hardware you did not use. Neither app has been run on a physical device;
 ## Conventions
 
 - Conventional Commits, scoped by area: `feat(android): …`,
-  `fix(shared): …`, `docs(protocol): …`.
+  `fix(shared): …
+`, `docs(protocol): …`.
 - British English in prose and UI copy.
 - Files own one responsibility; split before 400 lines.
 - Comments explain decisions and protocol constraints, not what the code
@@ -181,14 +183,29 @@ gitignored local files and must be backed up separately.
 
 ## Working rules
 
+- Inspect the README, manifests, CI workflows, and nearby code before editing.
+- Preserve existing architecture, naming, formatting, and error-handling conventions.
+- Use project scripts for validation; never claim checks you did not run.
+- Keep changes scoped and update tests or documentation when behavior changes.
+- Use feature branches and pull requests.
+- Treat generated files, credentials, deployment configuration, and release metadata as sensitive.
 - Inspect the README, manifests, CI workflows and nearby code before editing.
 - Preserve existing architecture, naming, formatting and error handling.
-- Use project scripts for validation; never claim checks you did not run.
 - Keep changes scoped and update tests or documentation when behaviour changes.
-- Use feature branches and pull requests, and treat generated files,
-  credentials, deployment configuration and release metadata as sensitive.
+- Use feature branches and pull requ
 
 <!-- allowed-agents -->
+## Allowed agents
+
+Only **Claude** (Anthropic) and **Mistral** (Mistral AI) may be used as coding agents in this repository. This rule supersedes any earlier agent-attribution guidance in this file.
+
+- Agent-assisted commits must credit only one of those agents:
+  - `Co-Authored-By: Claude <noreply@anthropic.com>`
+  - `Co-Authored-By: Mistral Vibe <vibe@mistral.ai>`
+- Allowed agent footers are `🤖 Generated with [Claude Code](https://claude.com/claude-code)` and `🤖 Generated with [Mistral Vibe](https://mistral.ai)`.
+- Do not add `Co-Authored-By:` trailers, `Generated with` footers, author names, or committer identities for any other agent or AI tool.
+- Do not credit another agent in commit metadata.
+
 ## Allowed agents
 
 Only **Claude** (Anthropic) and **Mistral** (Mistral AI) may be used as coding agents in this repository. This rule supersedes any earlier agent-attribution guidance in this file.
