@@ -33,8 +33,7 @@ Read-only, and new. I would rather say so plainly.
 
 - **The dashboard works end to end.** All four screens draw from a full read of a real account, a second launch opens from the saved copy, and the reading banner can be dismissed while the read continues behind it.
 - **The figures are honest by construction.** A read that ends early is labelled partial rather than passed off as complete, and the runaway guard stops at 50,000 plays.
-- **Both channels are live, neither app has been run on a device.** Fathom 0.2.1 is distributed through AltStore Classic and a self-hosted F-Droid repo. Everything verified is Android emulator and iOS simulator; no physical-device smoke test has been done. The Android APK is signed with the Fathom release key. The AltSto
-re IPA is intentionally unsigned because AltStore Classic re-signs it with the user's Apple ID.
+- **Both channels are live, neither app has been run on a device.** Fathom 0.2.1 is distributed through AltStore Classic and a self-hosted F-Droid repo. Everything verified is Android emulator and iOS simulator; no physical-device smoke test has been done. The Android APK is signed with the Fathom release key. The AltStore IPA is intentionally unsigned because AltStore Classic re-signs it with the user's Apple ID.
 - **The write path is planned, not started.** Live scrobbling — OAuth, play qualification, an outbound queue and the controls that come with them — is designed in the issue tracker. Nothing here writes yet.
 
 The changelog is in [CHANGELOG.md](CHANGELOG.md), the conventions and the
@@ -66,8 +65,7 @@ research behind reading the repo at all.
 |-----------|---------|
 | `shared/` | Kotlin Multiplatform core: lexicon record models, tolerant JSON decoding, XRPC construction, and all of the statistics. Consumed by Android as a Gradle module and by iOS as an XCFramework. |
 | `Android/` | Android client (Kotlin, Compose, Material 3). Also the only Gradle root. |
-| `iOS/` | iOS client (SwiftUI), with a ge
-nerated Xcode project. |
+| `iOS/` | iOS client (SwiftUI), with a generated Xcode project. |
 | `lexicons/` | The `fm.teal.*` lexicons, vendored from [teal-fm/teal](https://github.com/teal-fm/teal) unmodified. |
 | `website/` | The public landing page, privacy policy, terms, client metadata and icon, served by Vercel. |
 | `tools/release/` | Local publisher for F-Droid, AltStore and GitHub Releases, plus manifest, SBOM and source validation helpers. |
@@ -96,8 +94,7 @@ nerated Xcode project. |
   statement of where the figures come from.
 - **About** — the version and build number from the actual bundle, the source
   repository, the AGPL-3.0 text bundled for offline reading, third-party
-  notices, and links to the privacy policy,
- terms and support.
+  notices, and links to the privacy policy, terms and support.
 - **Saved history** — a completed read is written to app-private storage, so a
   second launch draws the dashboard immediately and refreshes behind it. A
   complete saved copy is also the stopping point for an incremental read: only
@@ -131,8 +128,7 @@ Android draws the same information with Material 3 components.
 
 | Now | Stats | History | Profile |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/images/screens/now.png" wi
-dth="200" alt="Now screen: today's plays, time and streak, a fourteen-day chart, and recent plays"> | <img src="docs/images/screens/stats.png" width="200" alt="Stats screen: totals for 7 days and top artists"> | <img src="docs/images/screens/history.png" width="200" alt="History screen: plays grouped by day"> | <img src="docs/images/screens/profile.png" width="200" alt="Profile screen: account details and how the figures are made"> |
+| <img src="docs/images/screens/now.png" width="200" alt="Now screen: today's plays, time and streak, a fourteen-day chart, and recent plays"> | <img src="docs/images/screens/stats.png" width="200" alt="Stats screen: totals for 7 days and top artists"> | <img src="docs/images/screens/history.png" width="200" alt="History screen: plays grouped by day"> | <img src="docs/images/screens/profile.png" width="200" alt="Profile screen: account details and how the figures are made"> |
 
 ## Building
 
@@ -187,8 +183,7 @@ does not fetch blobs, which keeps the dashboard to one kind of network request
 and avoids decoding arbitrary images.
 
 <p align="center">
-  <img src="docs/images/app-icon.png" alt="Fathom's app icon: five teal
- bars on a deep teal-black tile" width="180">
+  <img src="docs/images/app-icon.png" alt="Fathom's app icon: five teal bars on a deep teal-black tile" width="180">
   &nbsp;&nbsp;&nbsp;
   <img src="docs/images/launch-mark.png" alt="Fathom's launch mark: the same five bars on the deep background" width="247">
 </p>
@@ -227,8 +222,7 @@ and about five minutes.
 ## Releases
 
 The version and build number live in [`version.properties`](version.properties).
-Android reads that file directly; iOS is 
-synchronised into `project.yml` and
+Android reads that file directly; iOS is synchronised into `project.yml` and
 `Info.plist` by `python3 scripts/sync-version.py`, and CI rejects drift. Every
 uploaded build must raise `versionCode`, which is also the iOS build number.
 
@@ -268,8 +262,7 @@ analytics and no third-party requests.
 ## Limitations
 
 - **Read-only.** There is no scrobbling, no profile editing and no status
-  writing. `website/client-metadata.js
-on` records the scopes those would need.
+  writing. `website/client-metadata.json` records the scopes those would need.
 - **Long first loads.** The history is read a hundred plays at a time, so an
   account with tens of thousands of plays takes minutes to read the first
   time; the dashboard opens on the newest page and counts the plays it has
@@ -303,8 +296,7 @@ pick an issue, branch from `main`, and open a pull request.
 If you find this project useful, consider supporting its development:
 
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/ewancroft)
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-30363D?style=for-the-badge&logo=
-github&logoColor=white)](https://github.com/sponsors/ewanc26)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-30363D?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/ewanc26)
 
 ## Licence
 
