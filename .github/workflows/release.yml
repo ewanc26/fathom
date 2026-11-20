@@ -76,7 +76,7 @@ jobs:
           output-file: sbom-android-${{ needs.resolve-tag.outputs.tag }}.spdx.json
 
       - name: Upload Android SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-android
           path: sbom-android-*.spdx.json
@@ -108,7 +108,7 @@ jobs:
             --version "${{ needs.resolve-tag.outputs.tag }}"
 
       - name: Upload iOS SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-ios
           path: sbom-ios-*.spdx.json
