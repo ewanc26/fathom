@@ -304,6 +304,8 @@ If you find this project useful, consider supporting its development:
 Fathom is licensed under the GNU Affero General Public License v3.0. See
 [LICENSE](LICENSE).
 
+Copyright (C) 2026 Ewan Croft (ewanc26).
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=ewanc26%2Ffathom&type=date&legend=bottom-right">
