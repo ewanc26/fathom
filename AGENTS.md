@@ -129,8 +129,8 @@ python3 scripts/sync-version.py --check
 - `./gradlew test` does **not** run the shared tests: the KMP JVM target
   exposes `jvmTest`, not `test`. `:app:testDebugUnitTest` runs the Android
   transport test and needs no device or network.
-- Gradle 8.13 does not run on JDKs newer than 23. Set `JAVA_HOME` to a JDK
-  17–23 (or the build fails before it compiles anything).
+- Gradle 9.9.1 and AGP 9 need JDK 17 or newer; CI uses 21. Set `JAVA_HOME`
+  to a JDK that Gradle version supports.
 - `xcodebuild` needs the XCFramework, which is gitignored and must be built
   first. Rebuild it after any change under `shared/`.
 - The Xcode project is generated. `iOS/Fathom.xcodeproj` is gitignored;

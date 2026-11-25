@@ -7,10 +7,10 @@
 # would go stale the moment shared/ changed without anyone noticing.
 #
 #   ./scripts/build-xcframework.sh          # debug slices
-#   JAVA_HOME=/path/to/jdk ./scripts/...   # when 17-23 is not your default
+#   JAVA_HOME=/path/to/jdk ./scripts/...   # to pick a specific JDK
 #
-# Gradle 8.13 does not run on JDKs newer than 23, so set JAVA_HOME when the
-# system default is newer.
+# The build needs JDK 17 or newer (CI uses 21); set JAVA_HOME if the system
+# default is not one the Gradle wrapper supports.
 #
 # The task names are capitalised with tr rather than ${slice^}: macOS still
 # resolves `bash` to its GPL2-era 3.2, which treats that expansion as a bad

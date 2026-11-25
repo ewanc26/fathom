@@ -13,18 +13,9 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.serialization)
-}
-
-android {
-    namespace = "uk.ewancroft.fathom.shared"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-    }
 }
 
 kotlin {
@@ -46,7 +37,11 @@ kotlin {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    androidTarget {
+    android {
+        namespace = "uk.ewancroft.fathom.shared"
+        compileSdk = 36
+        minSdk = 26
+
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
