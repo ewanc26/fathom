@@ -139,7 +139,7 @@ cd Android
 ./gradlew assembleDebug
 ```
 
-Requires JDK 17–23 (Gradle 8.13 refuses newer), Android SDK 36, and
+Requires JDK 17 or newer (CI uses 21), Android SDK 36, and
 `local.properties` with `sdk.dir`. Run the shared core's tests with:
 
 ```bash

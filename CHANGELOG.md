@@ -6,6 +6,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Build toolchain: Gradle 9.9.1, Android Gradle Plugin 9.5.2 and Kotlin
+  2.4.21. `:app` uses AGP's built-in Kotlin and `:shared` uses the Android
+  Kotlin Multiplatform library plugin. Release workflow artifact actions
+  moved to `upload-artifact@v7` and `download-artifact@v8`.
+
 ### Added
 
 - Sign-in sequencing on both platforms (#9, slice 4a): `AuthManager`
